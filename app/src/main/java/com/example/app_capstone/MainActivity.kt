@@ -4,7 +4,6 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -16,6 +15,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.google.firebase.auth.AuthCredential
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -224,7 +225,18 @@ class MainActivity : AppCompatActivity() {
                     tvAdditionalInfo?.text = "Información Adicional: N/A"
                 }
             }
-            // Agrega más casos para otros layouts si es necesario
+            R.layout.content_settings -> {
+                val btnChangePassword = newLayout.findViewById<Button>(R.id.btnChangePassword)
+                val btnAbout = newLayout.findViewById<Button>(R.id.btnAbout)
+
+                btnChangePassword?.setOnClickListener {
+                    showChangePasswordDialog()
+                }
+
+                btnAbout?.setOnClickListener {
+                    showAboutDialog()
+                }
+            }
         }
     }
 
@@ -336,5 +348,91 @@ class MainActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+
+    /**
+     * Muestra el diálogo para cambiar la contraseña.
+     */
+    private fun showChangePasswordDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_change_password, null)
+        val builder = AlertDialog.Builder(this)
+            .setTitle("Cambiar Contraseña")
+            .setView(dialogView)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        // Referencia a los nuevos campos de texto
+        val etCurrentPassword = dialogView.findViewById<EditText>(R.id.etCurrentPassword)
+        val etNewPassword = dialogView.findViewById<EditText>(R.id.etNewPassword)
+        val etConfirmPassword = dialogView.findViewById<EditText>(R.id.etConfirmPassword)
+        val btnCancelPassword = dialogView.findViewById<Button>(R.id.btnCancelPassword)
+        val btnSavePassword = dialogView.findViewById<Button>(R.id.btnSavePassword)
+
+        btnCancelPassword.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnSavePassword.setOnClickListener {
+            val currentPassword = etCurrentPassword.text.toString()
+            val newPassword = etNewPassword.text.toString()
+            val confirmPassword = etConfirmPassword.text.toString()
+
+            if (currentPassword.isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty()) {
+                Toast.makeText(this, "Por favor, complete todos los campos.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (newPassword != confirmPassword) {
+                Toast.makeText(this, "Las contraseñas no coinciden.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val user = auth.currentUser
+            if (user != null) {
+                // Reautenticar al usuario con su contraseña actual
+                val credential = EmailAuthProvider.getCredential(user.email!!, currentPassword)
+
+                user.reauthenticate(credential)
+                    .addOnCompleteListener { reauthTask ->
+                        if (reauthTask.isSuccessful) {
+                            // Si la reautenticación es exitosa, actualizar la contraseña
+                            user.updatePassword(newPassword)
+                                .addOnCompleteListener { updateTask ->
+                                    if (updateTask.isSuccessful) {
+                                        Toast.makeText(this, "Contraseña actualizada correctamente.", Toast.LENGTH_SHORT).show()
+                                        dialog.dismiss()
+                                    } else {
+                                        Toast.makeText(this, "Error al actualizar la contraseña: ${updateTask.exception?.message}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                        } else {
+                            // Si la reautenticación falla (contraseña incorrecta)
+                            Toast.makeText(this, "La contraseña actual es incorrecta.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+            } else {
+                Toast.makeText(this, "Usuario no autenticado.", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+        }
+    }
+
+    /**
+     * Muestra el diálogo de "Acerca de la Aplicación".
+     */
+    private fun showAboutDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_about, null)
+        val builder = AlertDialog.Builder(this)
+            .setTitle("Acerca de la Aplicación")
+            .setView(dialogView)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        val btnCloseAbout = dialogView.findViewById<Button>(R.id.btnCloseAbout)
+        btnCloseAbout.setOnClickListener {
+            dialog.dismiss()
+        }
     }
 }

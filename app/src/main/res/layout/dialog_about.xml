@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Acerca de la Aplicación"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:textColor="@android:color/black" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:text="Esta es la aplicación de gestión de pacientes. Fue diseñada para ayudar a los médicos a organizar sus horarios, pagos y perfiles de manera eficiente. "
+        android:textSize="16sp" />
+
+    <Button
+        android:id="@+id/btnCloseAbout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="24dp"
+        android:text="Cerrar" />
+
+</LinearLayout>
