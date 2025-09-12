@@ -18,9 +18,7 @@
         <ImageView
             android:layout_width="100dp"
             android:layout_height="100dp"
-            android:src="@drawable/usuario"
-            android:contentDescription="@string/app_name"
-            android:tint="@color/colorPrimary" />
+            android:src="@drawable/ic_register_app"/>
 
         <TextView
             android:layout_width="match_parent"

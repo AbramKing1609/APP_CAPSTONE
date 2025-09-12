@@ -24,8 +24,7 @@
                 android:layout_width="100dp"
                 android:layout_height="100dp"
                 android:src="@drawable/usuario"
-                android:contentDescription="@string/app_name"
-                android:tint="@color/colorPrimary" />
+                android:contentDescription="@string/app_name"/>
 
             <TextView
                 android:layout_width="match_parent"
