@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "557784303208",
+    "project_id": "consultasperu-262df",
+    "storage_bucket": "consultasperu-262df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:557784303208:android:65f1acd18849c21c24dddd",
+        "android_client_info": {
+          "package_name": "com.example.app_capstone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTOAtQ_uCvOUktkRf_JP_T35YnpFoEfbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
