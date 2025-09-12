@@ -3,8 +3,10 @@ package com.example.app_capstone
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -23,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnPagos: LinearLayout
     private lateinit var btnProfile: ImageButton
     private lateinit var btnSettings: ImageButton
+    private lateinit var mainContentFrame: FrameLayout
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
@@ -43,6 +46,7 @@ class MainActivity : AppCompatActivity() {
         btnPagos = findViewById(R.id.btnPagos)
         btnProfile = findViewById(R.id.btnProfile)
         btnSettings = findViewById(R.id.btnSettings)
+        mainContentFrame = findViewById(R.id.main_content_frame)
     }
 
     private fun setupNavigation() {
@@ -51,6 +55,7 @@ class MainActivity : AppCompatActivity() {
 
         btnHome.setOnClickListener {
             selectButton(btnHome)
+            displayContent(R.layout.content_home)
         }
 
         btnPagos.setOnClickListener {
@@ -72,11 +77,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnProfile.setOnClickListener {
-            showProfileDialog()
+            displayContent(R.layout.content_profile)
         }
 
         btnSettings.setOnClickListener {
-            showSettingsDialog()
+            displayContent(R.layout.content_settings)
         }
     }
 
@@ -115,23 +120,30 @@ class MainActivity : AppCompatActivity() {
                     val lastName = document.getString("lastName") ?: ""
 
                     // Mostrar contenido de inicio con los datos del usuario
-                    showHomeContent(name, lastName)
+                    displayContent(R.layout.content_home, name, lastName)
                 }
             }
             .addOnFailureListener {
-                showHomeContent("Doctor", "")
+                displayContent(R.layout.content_home, "Doctor", "")
             }
     }
 
-    private fun showHomeContent(name: String = "", lastName: String = "") {
-        // Primero, encuentra la vista que incluye el diseño content_home
-        val contentHomeView = findViewById<View>(R.id.contentHome)
+    /**
+     * Muestra el contenido del layout especificado en el FrameLayout principal.
+     */
+    private fun displayContent(layoutId: Int, name: String = "", lastName: String = "") {
+        // Limpia cualquier vista anterior en el contenedor
+        mainContentFrame.removeAllViews()
 
-        // Verifica si la vista existe antes de buscar elementos en ella
-        contentHomeView?.let {
-            val tvWelcome = it.findViewById<TextView>(R.id.tvWelcome)
-            val tvDoctorName = it.findViewById<TextView>(R.id.tvDoctorName)
-            val btnLogout = it.findViewById<Button>(R.id.btnLogout)
+        // Infla el nuevo layout y lo agrega al FrameLayout
+        val newLayout = LayoutInflater.from(this).inflate(layoutId, mainContentFrame, false)
+        mainContentFrame.addView(newLayout)
+
+        // Si el layout es el de inicio, actualiza los datos del usuario
+        if (layoutId == R.layout.content_home) {
+            val tvWelcome = newLayout.findViewById<TextView>(R.id.tvWelcome)
+            val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
+            val btnLogout = newLayout.findViewById<Button>(R.id.btnLogout)
 
             tvWelcome?.text = "Bienvenido,"
             tvDoctorName?.text = "$name $lastName"
@@ -151,22 +163,6 @@ class MainActivity : AppCompatActivity() {
                 goToLogin()
             }
             .setNegativeButton("Cancelar", null)
-            .show()
-    }
-
-    private fun showProfileDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Perfil")
-            .setMessage("Aquí se mostrará la información de tu perfil.")
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-    private fun showSettingsDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Ajustes")
-            .setMessage("Aquí estarán las opciones de configuración de la aplicación.")
-            .setPositiveButton("OK", null)
             .show()
     }
 

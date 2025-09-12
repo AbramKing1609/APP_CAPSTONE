@@ -67,10 +67,9 @@
 
     </RelativeLayout>
 
-    <!-- Contenido de la pantalla principal -->
-    <include
-        android:id="@+id/contentHome"
-        layout="@layout/content_home"
+    <!-- Contenedor para el contenido de la pantalla -->
+    <FrameLayout
+        android:id="@+id/main_content_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/bottomNav"
