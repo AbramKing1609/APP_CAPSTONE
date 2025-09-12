@@ -1,165 +1,147 @@
 package com.example.app_capstone
 
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
-import android.widget.EditText
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.app_capstone.R
-import com.google.android.material.textfield.TextInputLayout
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class RegisterActivity : AppCompatActivity() {
 
-    // TextInputLayout
-    private lateinit var tilName: TextInputLayout
-    private lateinit var tilLastName: TextInputLayout
-    private lateinit var tilColegiatura: TextInputLayout
-    private lateinit var tilEspecialidad: TextInputLayout
-    private lateinit var tilPrecio: TextInputLayout
-    private lateinit var tilPassword: TextInputLayout
-    private lateinit var tilConfirmPassword: TextInputLayout
-
-    // EditText
-    private lateinit var etName: EditText
-    private lateinit var etLastName: EditText
-    private lateinit var etColegiatura: EditText
-    private lateinit var etEspecialidad: EditText
-    private lateinit var etPrecio: EditText
-    private lateinit var etPassword: EditText
-    private lateinit var etConfirmPassword: EditText
-
+    private lateinit var viewPager: ViewPager2
+    private lateinit var btnNext: ImageView
+    private lateinit var btnBack: ImageView
+    private lateinit var tvPageIndicator: TextView
     private lateinit var btnRegister: Button
+    private lateinit var tvLoginLink: TextView
+
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+
+    // Datos del formulario que se guardarán temporalmente
+    private val formData = mutableMapOf<String, Any>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.register_activity)
 
-        // Inicializar TextInputLayout
-        tilName = findViewById(R.id.tilName)
-        tilLastName = findViewById(R.id.tilLastName)
-        tilColegiatura = findViewById(R.id.tilColegiatura)
-        tilEspecialidad = findViewById(R.id.tilEspecialidad)
-        tilPrecio = findViewById(R.id.tilPrecio)
-        tilPassword = findViewById(R.id.tilPassword)
-        tilConfirmPassword = findViewById(R.id.tilConfirmPassword)
+        initViews()
+        setupViewPager()
+        setupListeners()
+    }
 
-        // Inicializar EditText
-        etName = findViewById(R.id.etName)
-        etLastName = findViewById(R.id.etLastName)
-        etColegiatura = findViewById(R.id.etColegiatura)
-        etEspecialidad = findViewById(R.id.etEspecialidad)
-        etPrecio = findViewById(R.id.etPrecio)
-        etPassword = findViewById(R.id.etPassword)
-        etConfirmPassword = findViewById(R.id.etConfirmPassword)
-
-        // Botón
+    private fun initViews() {
+        viewPager = findViewById(R.id.viewPager)
+        btnNext = findViewById(R.id.btnNext)
+        btnBack = findViewById(R.id.btnBack)
+        tvPageIndicator = findViewById(R.id.tvPageIndicator)
         btnRegister = findViewById(R.id.btnRegister)
+        tvLoginLink = findViewById(R.id.tvLoginLink)
+    }
+
+    private fun setupViewPager() {
+        val pagerAdapter = RegisterPagerAdapter(this)
+        viewPager.adapter = pagerAdapter
+        viewPager.isUserInputEnabled = false // Deshabilita el deslizamiento manual
+
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                updateUIForPage(position)
+            }
+        })
+    }
+
+    private fun setupListeners() {
+        btnNext.setOnClickListener {
+            val currentItem = viewPager.currentItem
+            val currentFragment = supportFragmentManager.findFragmentByTag("f" + currentItem) as? RegisterFragmentInterface
+            if (currentFragment != null && currentFragment.validateFields()) {
+                viewPager.currentItem = currentItem + 1
+            }
+        }
+
+        btnBack.setOnClickListener {
+            val currentItem = viewPager.currentItem
+            viewPager.currentItem = currentItem - 1
+        }
 
         btnRegister.setOnClickListener {
-            if (validateForm()) {
-                registerDoctor()
-            }
+            registerDoctor()
+        }
+
+        tvLoginLink.setOnClickListener {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
         }
     }
 
-    private fun validateForm(): Boolean {
-        var isValid = true
-
-        // Nombre
-        if (etName.text.isNullOrEmpty()) {
-            tilName.error = "El nombre es obligatorio"
-            isValid = false
-        } else tilName.error = null
-
-        // Apellido
-        if (etLastName.text.isNullOrEmpty()) {
-            tilLastName.error = "El apellido es obligatorio"
-            isValid = false
-        } else tilLastName.error = null
-
-        // Colegiatura
-        if (etColegiatura.text.isNullOrEmpty()) {
-            tilColegiatura.error = "La colegiatura es obligatoria"
-            isValid = false
-        } else tilColegiatura.error = null
-
-        // Especialidad
-        if (etEspecialidad.text.isNullOrEmpty()) {
-            tilEspecialidad.error = "La especialidad es obligatoria"
-            isValid = false
-        } else tilEspecialidad.error = null
-
-        // Precio
-        if (etPrecio.text.isNullOrEmpty()) {
-            tilPrecio.error = "El precio es obligatorio"
-            isValid = false
-        } else tilPrecio.error = null
-
-        // Contraseña
-        val password = etPassword.text.toString()
-        if (password.isEmpty()) {
-            tilPassword.error = "La contraseña es obligatoria"
-            isValid = false
-        } else if (password.length < 6) {
-            tilPassword.error = "Debe tener al menos 6 caracteres"
-            isValid = false
-        } else tilPassword.error = null
-
-        // Confirmar contraseña
-        val confirmPassword = etConfirmPassword.text.toString()
-        if (confirmPassword.isEmpty()) {
-            tilConfirmPassword.error = "Confirme su contraseña"
-            isValid = false
-        } else if (password != confirmPassword) {
-            tilConfirmPassword.error = "Las contraseñas no coinciden"
-            isValid = false
-        } else tilConfirmPassword.error = null
-
-        return isValid
+    private fun updateUIForPage(position: Int) {
+        tvPageIndicator.text = "${position + 1}/3"
+        btnBack.visibility = if (position == 0) View.INVISIBLE else View.VISIBLE
+        btnNext.visibility = if (position == 2) View.INVISIBLE else View.VISIBLE
+        btnRegister.visibility = if (position == 2) View.VISIBLE else View.GONE
+        tvLoginLink.visibility = if (position == 2) View.GONE else View.VISIBLE
     }
 
     private fun registerDoctor() {
-        val name = etName.text.toString()
-        val lastName = etLastName.text.toString()
-        val colegiatura = etColegiatura.text.toString()
-        val especialidad = etEspecialidad.text.toString()
-        val precio = etPrecio.text.toString().toFloatOrNull() ?: 0f
-        val password = etPassword.text.toString()
+        // Validación final en el último fragmento
+        val lastFragment = supportFragmentManager.findFragmentByTag("f2") as? RegisterFragment3
+        if (lastFragment?.validateFields() == true) {
+            val email = formData["email"] as String
+            val password = lastFragment.getPassword()
 
-        // 👉 Usaremos la colegiatura como "email"
-        val email = "$colegiatura@consultasperu.com"
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val uid = task.result?.user?.uid ?: return@addOnCompleteListener
+                        formData["uid"] = uid
 
-        // 1. Registrar en Firebase Authentication
-        FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val uid = task.result?.user?.uid ?: return@addOnCompleteListener
-
-                    // 2. Guardar datos en Firestore
-                    val db = FirebaseFirestore.getInstance()
-                    val doctor = hashMapOf(
-                        "uid" to uid,
-                        "name" to name,
-                        "lastName" to lastName,
-                        "colegiatura" to colegiatura,
-                        "especialidad" to especialidad,
-                        "precio" to precio
-                    )
-
-                    db.collection("doctores").document(uid)
-                        .set(doctor)
-                        .addOnSuccessListener {
-                            Toast.makeText(this, "Doctor registrado en Firebase ✅", Toast.LENGTH_SHORT).show()
-                            finish()
-                        }
-                        .addOnFailureListener { e ->
-                            Toast.makeText(this, "Error guardando datos: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                } else {
-                    Toast.makeText(this, "Error en registro: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                        db.collection("doctores").document(uid).set(formData)
+                            .addOnSuccessListener {
+                                Toast.makeText(this, "Registro exitoso", Toast.LENGTH_SHORT).show()
+                                startActivity(Intent(this, LoginActivity::class.java))
+                                finish()
+                            }
+                            .addOnFailureListener { e ->
+                                Toast.makeText(this, "Error guardando datos: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                    } else {
+                        Toast.makeText(this, "Error de autenticación: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                    }
                 }
+        }
+    }
+
+    fun saveFormData(key: String, value: Any) {
+        formData[key] = value
+    }
+
+    // Interfaz para los fragmentos de registro
+    interface RegisterFragmentInterface {
+        fun validateFields(): Boolean
+    }
+
+    // Adaptador para el ViewPager
+    private inner class RegisterPagerAdapter(fa: FragmentActivity) : FragmentStateAdapter(fa) {
+        override fun getItemCount(): Int = 3
+
+        override fun createFragment(position: Int): Fragment {
+            return when (position) {
+                0 -> RegisterFragment1()
+                1 -> RegisterFragment2()
+                2 -> RegisterFragment3()
+                else -> throw IllegalStateException("Invalid position: $position")
             }
         }
     }
+}

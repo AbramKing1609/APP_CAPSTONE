@@ -11,6 +11,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -129,9 +130,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Muestra el contenido del layout especificado en el FrameLayout principal.
+     * Muestra el contenido del layout especificado en el FrameLayout principal y actualiza los datos.
      */
-    private fun displayContent(layoutId: Int, name: String = "", lastName: String = "") {
+    private fun displayContent(layoutId: Int) {
         // Limpia cualquier vista anterior en el contenedor
         mainContentFrame.removeAllViews()
 
@@ -139,7 +140,92 @@ class MainActivity : AppCompatActivity() {
         val newLayout = LayoutInflater.from(this).inflate(layoutId, mainContentFrame, false)
         mainContentFrame.addView(newLayout)
 
-        // Si el layout es el de inicio, actualiza los datos del usuario
+        when (layoutId) {
+            R.layout.content_home -> {
+                val currentUser = auth.currentUser
+                if (currentUser != null) {
+                    db.collection("doctores").document(currentUser.uid).get()
+                        .addOnSuccessListener { document ->
+                            if (document.exists()) {
+                                val name = document.getString("name") ?: "Doctor"
+                                val lastName = document.getString("lastName") ?: ""
+                                val tvWelcome = newLayout.findViewById<TextView>(R.id.tvWelcome)
+                                val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
+                                val btnLogout = newLayout.findViewById<Button>(R.id.btnLogout)
+
+                                tvWelcome?.text = "Bienvenido,"
+                                tvDoctorName?.text = "$name $lastName"
+
+                                btnLogout?.setOnClickListener {
+                                    showLogoutDialog()
+                                }
+                            }
+                        }
+                }
+            }
+            R.layout.content_profile -> {
+                val currentUser = auth.currentUser
+                val tvProfileName = newLayout.findViewById<TextView>(R.id.tvProfileName)
+                val tvProfileSpecialty = newLayout.findViewById<TextView>(R.id.tvProfileSpecialty)
+                val tvUniversity = newLayout.findViewById<TextView>(R.id.tvUniversity)
+                val tvExperienceYears = newLayout.findViewById<TextView>(R.id.tvExperienceYears)
+                val tvHospital = newLayout.findViewById<TextView>(R.id.tvHospital)
+                val tvAdditionalInfo = newLayout.findViewById<TextView>(R.id.tvAdditionalInfo)
+                val ivProfilePicture = newLayout.findViewById<ImageView>(R.id.ivProfilePicture)
+
+                if (currentUser != null) {
+                    db.collection("doctores").document(currentUser.uid).get()
+                        .addOnSuccessListener { document ->
+                            if (document.exists()) {
+                                val name = document.getString("name") ?: "N/A"
+                                val lastName = document.getString("lastName") ?: ""
+                                val specialty = document.getString("especialidad") ?: "N/A"
+                                val university = document.getString("university") ?: "N/A"
+                                val experienceYears = document.get("experience_years")?.toString() ?: "N/A"
+                                val hospital = document.getString("hospital") ?: "N/A"
+                                val additionalInfo = document.getString("additional_info") ?: "N/A"
+
+                                tvProfileName?.text = "$name $lastName"
+                                tvProfileSpecialty?.text = specialty
+                                tvUniversity?.text = "Universidad: $university"
+                                tvExperienceYears?.text = "Años de experiencia: $experienceYears"
+                                tvHospital?.text = "Hospital: $hospital"
+                                tvAdditionalInfo?.text = "Información Adicional: $additionalInfo"
+                                // Note: For the image, you would need to use a library like Glide or Picasso
+                                // to load it from a URL if you have one stored in Firestore.
+                            } else {
+                                // In case the document doesn't exist
+                                tvProfileName?.text = "N/A"
+                                tvProfileSpecialty?.text = "N/A"
+                                tvUniversity?.text = "Universidad: N/A"
+                                tvExperienceYears?.text = "Años de experiencia: N/A"
+                                tvHospital?.text = "Hospital: N/A"
+                                tvAdditionalInfo?.text = "Información Adicional: N/A"
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            Toast.makeText(this, "Error al cargar datos: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                } else {
+                    // No user logged in
+                    tvProfileName?.text = "N/A"
+                    tvProfileSpecialty?.text = "N/A"
+                    tvUniversity?.text = "Universidad: N/A"
+                    tvExperienceYears?.text = "Años de experiencia: N/A"
+                    tvHospital?.text = "Hospital: N/A"
+                    tvAdditionalInfo?.text = "Información Adicional: N/A"
+                }
+            }
+            // Agrega más casos para otros layouts si es necesario
+        }
+    }
+
+    // He mantenido la sobrecarga del método displayContent para la pantalla de inicio
+    private fun displayContent(layoutId: Int, name: String = "", lastName: String = "") {
+        mainContentFrame.removeAllViews()
+        val newLayout = LayoutInflater.from(this).inflate(layoutId, mainContentFrame, false)
+        mainContentFrame.addView(newLayout)
+
         if (layoutId == R.layout.content_home) {
             val tvWelcome = newLayout.findViewById<TextView>(R.id.tvWelcome)
             val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
