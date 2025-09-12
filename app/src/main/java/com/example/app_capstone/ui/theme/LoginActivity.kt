@@ -1,17 +1,21 @@
 package com.example.app_capstone
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.app_capstone.MainActivity
+import com.example.app_capstone.RegisterActivity
 import com.example.app_capstone.R
 import com.google.android.material.textfield.TextInputLayout
-
-// 👇 IMPORTA ESTAS LIBRERÍAS
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.firestore.FirebaseFirestore
 
 class LoginActivity : AppCompatActivity() {
@@ -22,6 +26,11 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var etPassword: EditText
     private lateinit var btnLogin: Button
     private lateinit var tvGoRegister: TextView
+
+    // Instancia de FirebaseAuth para la autenticación
+    private lateinit var auth: FirebaseAuth
+    // Instancia de FirebaseFirestore para la base de datos
+    private lateinit var db: FirebaseFirestore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,10 +44,12 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         tvGoRegister = findViewById(R.id.tvGoRegister)
 
+        // Inicializar la instancia de Firebase Auth y Firestore
+        auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
+
         btnLogin.setOnClickListener {
-            if (validateLogin()) {
-                checkCredentials()
-            }
+            checkCredentials()
         }
 
         tvGoRegister.setOnClickListener {
@@ -46,82 +57,93 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun validateLogin(): Boolean {
-        var isValid = true
-
-        if (etUsername.text.isNullOrEmpty()) {
-            tilUsername.error = "El usuario es obligatorio"
-            isValid = false
-        } else tilUsername.error = null
-
-        if (etPassword.text.isNullOrEmpty()) {
-            tilPassword.error = "La contraseña es obligatoria"
-            isValid = false
-        } else tilPassword.error = null
-
-        return isValid
-    }
-
     private fun checkCredentials() {
-        val colegiatura = etUsername.text.toString()
-        val password = etPassword.text.toString()
+        val colegiatura = etUsername.text.toString().trim()
+        val password = etPassword.text.toString().trim()
 
-        if (colegiatura.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show()
+        // Validar los campos de entrada
+        if (colegiatura.isEmpty()) {
+            tilUsername.error = "El número de colegiatura es obligatorio"
             return
+        } else {
+            tilUsername.error = null
         }
 
-        val email = "$colegiatura@consultasperu.com"
+        if (password.isEmpty()) {
+            tilPassword.error = "La contraseña es obligatoria"
+            return
+        } else {
+            tilPassword.error = null
+        }
 
-        FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@addOnCompleteListener
-
-                    val db = FirebaseFirestore.getInstance()
-                    db.collection("doctores").document(uid)
-                        .get()
-                        .addOnSuccessListener { document ->
-                            if (document.exists()) {
-                                val sharedPref = getSharedPreferences("ConsultasPeru", MODE_PRIVATE)
-                                with(sharedPref.edit()) {
-                                    putString("name", document.getString("name"))
-                                    putString("lastName", document.getString("lastName"))
-                                    putString("colegiatura", document.getString("colegiatura"))
-                                    putString("especialidad", document.getString("especialidad"))
-                                    putFloat(
-                                        "precio",
-                                        document.getDouble("precio")?.toFloat() ?: 0f
-                                    )
-                                    apply()
-                                }
-
-                                Toast.makeText(
-                                    this@LoginActivity,
-                                    "Bienvenido ${document.getString("name")}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                startActivity(Intent(this, MainActivity::class.java))
-                                finish()
-                            } else {
-                                Toast.makeText(
-                                    this@LoginActivity,
-                                    "No se encontraron datos en Firestore",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-                        .addOnFailureListener { e ->
-                            Toast.makeText(
-                                this@LoginActivity,
-                                "Error al obtener datos: ${e.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+        // Primero, se debe buscar el documento del doctor por su número de colegiatura.
+        db.collection("doctores")
+            .whereEqualTo("colegiatura", colegiatura)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                if (querySnapshot.isEmpty) {
+                    // No se encontró un doctor con esa colegiatura
+                    Toast.makeText(this, "Número de colegiatura no encontrado", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
+                    // Se encontró un doctor, se obtiene el primer documento (asumiendo que es único)
+                    val document = querySnapshot.documents[0]
+                    val email = document.getString("email")
+
+                    if (email != null) {
+                        // Se utiliza el correo electrónico obtenido para la autenticación
+                        auth.signInWithEmailAndPassword(email, password)
+                            .addOnCompleteListener(this) { task ->
+                                if (task.isSuccessful) {
+                                    // Inicio de sesión exitoso, se procede a guardar los datos en SharedPreferences y navegar a la siguiente actividad
+                                    val sharedPref = getSharedPreferences("ConsultasPeru", Context.MODE_PRIVATE)
+                                    with(sharedPref.edit()) {
+                                        // Guardar todos los datos del doctor en SharedPreferences
+                                        putString("name", document.getString("name"))
+                                        putString("lastName", document.getString("lastName"))
+                                        putString("email", document.getString("email"))
+                                        putString("dni", document.getString("dni"))
+                                        putString("celular", document.getString("celular"))
+                                        putString("age", document.get("age")?.toString())
+                                        putString("city", document.getString("city"))
+                                        putString("nationality", document.getString("nationality"))
+                                        putString("especialidad", document.getString("especialidad"))
+                                        putString("colegiatura", document.getString("colegiatura"))
+                                        putString("university", document.getString("university"))
+                                        putString("experienceYears", document.get("experienceYears")?.toString())
+                                        putString("hospital", document.getString("hospital"))
+                                        putString("additionalInfo", document.getString("additionalInfo"))
+                                        putString("profileImageUrl", document.getString("profileImageUrl"))
+                                        apply()
+                                    }
+
+                                    Toast.makeText(
+                                        this@LoginActivity,
+                                        "Bienvenido ${document.getString("name")}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+
+                                    startActivity(Intent(this, MainActivity::class.java))
+                                    finish()
+                                } else {
+                                    // Fallo en la autenticación con la contraseña
+                                    Log.w("LoginActivity", "signInWithEmail:failure", task.exception)
+                                    val errorMessage = when (task.exception) {
+                                        is FirebaseAuthInvalidCredentialsException -> "Contraseña incorrecta"
+                                        is FirebaseAuthInvalidUserException -> "Usuario no válido"
+                                        else -> "Error de autenticación: ${task.exception?.message}"
+                                    }
+                                    Toast.makeText(this@LoginActivity, errorMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                    } else {
+                        Toast.makeText(this, "Error: el correo electrónico del doctor no se encontró.", Toast.LENGTH_SHORT).show()
+                    }
                 }
+            }
+            .addOnFailureListener { e ->
+                // Error al buscar en Firestore
+                Log.e("LoginActivity", "Error al buscar el documento en Firestore", e)
+                Toast.makeText(this, "Error al iniciar sesión: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
 }
