@@ -36,6 +36,16 @@
             android:name=".RegisterActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".NotificationsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".PatientsActivity"
+            android:exported="false" />
+
+        <activity android:name=".PaymentsActivity"
+            android:exported="false" />
 
     </application>
 </manifest>
