@@ -106,7 +106,7 @@ class RegisterActivity : AppCompatActivity() {
                         val uid = task.result?.user?.uid ?: return@addOnCompleteListener
                         formData["uid"] = uid
 
-                        db.collection("doctores").document(uid).set(formData)
+                        db.collection("medicos").document(uid).set(formData)
                             .addOnSuccessListener {
                                 Toast.makeText(this, "Registro exitoso", Toast.LENGTH_SHORT).show()
                                 startActivity(Intent(this, LoginActivity::class.java))

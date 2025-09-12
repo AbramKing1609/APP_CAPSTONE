@@ -77,7 +77,7 @@ class LoginActivity : AppCompatActivity() {
         }
 
         // Primero, se debe buscar el documento del doctor por su número de colegiatura.
-        db.collection("doctores")
+        db.collection("medicos")
             .whereEqualTo("colegiatura", colegiatura)
             .get()
             .addOnSuccessListener { querySnapshot ->
