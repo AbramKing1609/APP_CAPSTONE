@@ -1,6 +1,4 @@
 <resources>
     <string name="app_name">APP_CAPSTONE</string>
     <!-- Descripciones de contenido para los nuevos iconos -->
-    <string name="profile_icon_desc">Icono de perfil</string>
-    <string name="settings_icon_desc">Icono de ajustes</string>
 </resources>
