@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Ajustes de la Aplicación"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black" />
+
+    <!-- Opción de notificaciones -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Notificaciones"
+            android:textSize="18sp"
+            android:textColor="@android:color/black" />
+
+        <Switch
+            android:id="@+id/swNotifications"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:background="@android:color/darker_gray" />
+
+    <!-- Opción de cambiar contraseña -->
+    <Button
+        android:id="@+id/btnChangePassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Cambiar Contraseña"
+        android:backgroundTint="@color/peru_red"
+        android:textColor="@android:color/white" />
+
+    <!-- Opción de información de la app -->
+    <Button
+        android:id="@+id/btnAbout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Acerca de la Aplicación"
+        android:backgroundTint="@color/peru_red"
+        android:textColor="@android:color/white" />
+
+</LinearLayout>
