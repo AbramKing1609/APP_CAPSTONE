@@ -8,50 +8,105 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="24dp"> <!-- Añadido padding para mejor estética -->
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Paso 2: Datos Profesionales y de Consulta"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/colorPrimary"
+            android:layout_marginBottom="16dp" />
+
+        <!-- HOSPITAL (CORREGIDO para autocompletar y filtrar) -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilEspecialidad"
+            android:id="@+id/tilHospital"
+            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            app:errorEnabled="true">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEspecialidad"
+            app:errorEnabled="true"
+            android:hint="Hospital donde labora">
+
+            <AutoCompleteTextView
+                android:id="@+id/actvHospital"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Especialidad"
-                android:inputType="textCapWords" />
+                android:drawablePadding="8dp"
+                android:inputType="textCapWords" /> <!-- inputType cambiado a textCapWords para permitir escritura -->
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- ID_ESPECIALIDAD (CORREGIDO para autocompletar y filtrar) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilEspecialidad"
+            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:errorEnabled="true"
+            android:hint="Especialidad">
+
+            <AutoCompleteTextView
+                android:id="@+id/actvEspecialidad"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawablePadding="8dp"
+                android:inputType="textCapWords" /> <!-- inputType cambiado a textCapWords para permitir escritura -->
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- COLEGIATURA (Campo de texto normal) -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilColegiatura"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            app:errorEnabled="true">
+            app:errorEnabled="true"
+            android:hint="N° de Colegiatura">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etColegiatura"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Número de Colegiatura"
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- ID_UNIVERSIDAD (CORREGIDO para autocompletar y filtrar) -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilUniversity"
+            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:errorEnabled="true"
+            android:hint="Universidad">
+
+            <AutoCompleteTextView
+                android:id="@+id/actvUniversity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawablePadding="8dp"
+                android:inputType="textCapWords" /> <!-- inputType cambiado a textCapWords para permitir escritura -->
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- AÑIO_GRADUACION (Campo de texto normal) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilGraduationYear"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             app:errorEnabled="true">
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etUniversity"
+                android:id="@+id/etGraduationYear"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Universidad"
-                android:inputType="textCapWords" />
+                android:hint="Año de Graduación"
+                android:inputType="number"
+                android:maxLength="4" />
         </com.google.android.material.textfield.TextInputLayout>
 
+
+        <!-- EXP_ANIOS (Campo de texto normal) -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilExperienceYears"
             android:layout_width="match_parent"
@@ -66,33 +121,50 @@
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- PRECIO (Campo de texto normal) -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilHospital"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:errorEnabled="true">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etHospital"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Hospital/Clínica"
-                android:inputType="textCapWords" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilPrecio"
+            android:id="@+id/tilPrice"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             app:errorEnabled="true"
             app:prefixText="S/ ">
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPrecio"
+                android:id="@+id/etPrice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Precio de consulta"
+                android:hint="Precio de consulta (PRECIO)"
                 android:inputType="numberDecimal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- DISPONIBILIDAD (Campo de texto normal) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilAvailability"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:errorEnabled="true">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etAvailability"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Disponibilidad (DISPONIBILIDAD)"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- JORNADA_ATENCION (Campo de texto normal) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilWorkingHours"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:errorEnabled="true">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etWorkingHours"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Jornada de Atención (JORNADA_ATENCION)"
+                android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
     </LinearLayout>

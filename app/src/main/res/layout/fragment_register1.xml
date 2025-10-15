@@ -95,32 +95,40 @@
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- DISTRITO (CORREGIDO para autocompletar y filtrar) -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilCity"
+            android:id="@+id/tilDistrito"
+            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            app:errorEnabled="true">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etCity"
+            app:errorEnabled="true"
+            android:hint="Distrito de Residencia">
+
+            <AutoCompleteTextView
+                android:id="@+id/actvDistrito"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Ciudad"
-                android:inputType="textCapWords" />
+                android:inputType="textCapWords"
+                android:drawablePadding="8dp" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- NACIONALIDAD (CORREGIDO para autocompletar y filtrar) -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilNationality"
+            android:id="@+id/tilNacionalidad"
+            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            app:errorEnabled="true">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etNationality"
+            app:errorEnabled="true"
+            android:hint="Nacionalidad">
+
+            <AutoCompleteTextView
+                android:id="@+id/actvNacionalidad"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Nacionalidad"
-                android:inputType="textCapWords" />
+                android:inputType="textCapWords"
+                android:drawablePadding="8dp" />
         </com.google.android.material.textfield.TextInputLayout>
 
     </LinearLayout>
