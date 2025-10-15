@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Nombre del Doctor"
+            android:text="Cargando Nombre..."
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="@android:color/black" />
@@ -35,7 +35,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Especialidad Médica"
+            android:text="Cargando Especialidad..."
             android:textSize="18sp"
             android:textColor="@android:color/darker_gray" />
 
@@ -77,7 +77,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Hospital: N/A"
+                android:text="Colegiatura: N/A"
                 android:textSize="16sp" />
 
             <TextView
