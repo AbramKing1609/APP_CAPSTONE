@@ -15,10 +15,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
 
 class MainActivity : AppCompatActivity() {
 
@@ -116,17 +119,20 @@ class MainActivity : AppCompatActivity() {
 
         // Recuperar datos de Firestore
         val userId = currentUser.uid
-        db.collection("doctores").document(userId).get()
+        db.collection("medicos").document(userId).get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
-                    val name = document.getString("name") ?: "Doctor"
-                    val lastName = document.getString("lastName") ?: ""
+                    val name = document.getString("NOMBRE") ?: "Doctor"
+                    val lastName = document.getString("APELLIDO") ?: ""
 
                     // Mostrar contenido de inicio con los datos del usuario
                     displayContent(R.layout.content_home, name, lastName)
+                } else {
+                    displayContent(R.layout.content_home, "Doctor", "")
                 }
             }
             .addOnFailureListener {
+                Toast.makeText(this, "Error al cargar datos del médico.", Toast.LENGTH_SHORT).show()
                 displayContent(R.layout.content_home, "Doctor", "")
             }
     }
@@ -146,16 +152,16 @@ class MainActivity : AppCompatActivity() {
             R.layout.content_home -> {
                 val currentUser = auth.currentUser
                 if (currentUser != null) {
-                    db.collection("doctores").document(currentUser.uid).get()
+                    db.collection("medicos").document(currentUser.uid).get()
                         .addOnSuccessListener { document ->
                             if (document.exists()) {
-                                val name = document.getString("name") ?: "Doctor"
-                                val lastName = document.getString("lastName") ?: ""
+                                val name = document.getString("NOMBRE") ?: "Doctor"
+                                val lastName = document.getString("APELLIDO") ?: ""
                                 val tvWelcome = newLayout.findViewById<TextView>(R.id.tvWelcome)
                                 val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
                                 val btnLogout = newLayout.findViewById<Button>(R.id.btnLogout)
 
-                                tvWelcome?.text = "Bienvenido,"
+                                tvWelcome?.text = "Hola Doctor/a,"
                                 tvDoctorName?.text = "$name $lastName"
 
                                 btnLogout?.setOnClickListener {
@@ -174,46 +180,95 @@ class MainActivity : AppCompatActivity() {
                 val tvHospital = newLayout.findViewById<TextView>(R.id.tvHospital)
                 val tvAdditionalInfo = newLayout.findViewById<TextView>(R.id.tvAdditionalInfo)
                 val ivProfilePicture = newLayout.findViewById<ImageView>(R.id.ivProfilePicture)
-                // Encuentra el botón de edición y le añade un listener
                 val btnEditProfile = newLayout.findViewById<Button>(R.id.btnEditProfile)
 
                 if (currentUser != null) {
-                    db.collection("doctores").document(currentUser.uid).get()
-                        .addOnSuccessListener { document ->
-                            if (document.exists()) {
-                                val name = document.getString("name") ?: "N/A"
-                                val lastName = document.getString("lastName") ?: ""
-                                val specialty = document.getString("especialidad") ?: "N/A"
-                                val university = document.getString("university") ?: "N/A"
-                                val experienceYears = document.get("experience_years")?.toString() ?: "N/A"
-                                val hospital = document.getString("hospital") ?: "N/A"
-                                val additionalInfo = document.getString("additional_info") ?: "N/A"
+                    val userId = currentUser.uid
+                    db.collection("medicos").document(userId).get()
+                        .addOnSuccessListener { doc ->
+                            if (doc.exists()) {
+                                // Extract basic data from medicos document
+                                val doctorData = doc.data ?: return@addOnSuccessListener
+                                val name = doctorData["NOMBRE"] as? String ?: "N/A"
+                                val lastName = doctorData["APELLIDO"] as? String ?: ""
 
-                                tvProfileName?.text = "$name $lastName"
-                                tvProfileSpecialty?.text = specialty
-                                tvUniversity?.text = "Universidad: $university"
-                                tvExperienceYears?.text = "Años de experiencia: $experienceYears"
-                                tvHospital?.text = "Hospital: $hospital"
-                                tvAdditionalInfo?.text = "Información Adicional: $additionalInfo"
-                                // Note: For the image, you would need to use a library like Glide or Picasso
-                                // to load it from a URL if you have one stored in Firestore.
+                                // Leer IDs numéricos (Long) para Especialidad, Universidad, y Hospital (asumimos que está directo en 'medicos')
+                                val idEspecialidad = doctorData["ID_ESPECIALIDAD"] as? Long
+                                val idUniversidad = doctorData["ID_UNIVERSIDAD"] as? Long
+                                val idHospital = doctorData["ID_HOSPITAL"] as? Long // <<< NUEVA EXTRACCIÓN DIRECTA DEL ID DEL HOSPITAL
 
-                                // Aquí se añade el listener al botón de edición
-                                btnEditProfile?.setOnClickListener {
-                                    showEditProfileDialog(document.data)
-                                }
+                                val expAnios = doctorData["EXP_ANIOS"]?.toString() ?: "N/A"
+                                // Assuming INFO_ADIC is the field for additional info
+                                val additionalInfo = doctorData["INFO_ADIC"] as? String ?: "N/A"
+
+                                // --- PREPARAR TAREAS DE CONSULTA (QUERY) ASUMIENDO CAMPOS DE RELACIÓN IGUALES ---
+
+                                // Tarea 1: Especialidad (busca por el valor del ID en el campo ID_ESPECIALIDAD)
+                                val specialtyTask = idEspecialidad?.let { id ->
+                                    db.collection("especialidad").whereEqualTo("ID_ESPECIALIDAD", id).limit(1).get()
+                                } ?: Tasks.forResult(null as QuerySnapshot?)
+
+                                // Tarea 2: Universidad (busca por el valor del ID en el campo ID_UNIVERSIDAD)
+                                val universityTask = idUniversidad?.let { id ->
+                                    db.collection("universidad").whereEqualTo("ID_UNIVERSIDAD", id).limit(1).get()
+                                } ?: Tasks.forResult(null as QuerySnapshot?)
+
+                                // Tarea 3: Hospital (busca por el valor del ID en el campo ID_HOSPITAL)
+                                val hospitalTask = idHospital?.let { id ->
+                                    // Usamos los campos confirmados: Colección 'hospital', Campo de búsqueda 'ID_HOSPITAL'
+                                    db.collection("hospital").whereEqualTo("ID_HOSPITAL", id).limit(1).get()
+                                } ?: Tasks.forResult(null as QuerySnapshot?)
+
+
+                                // Combine all tasks for synchronization
+                                Tasks.whenAllSuccess<Any>(specialtyTask, universityTask, hospitalTask)
+                                    .addOnSuccessListener { results ->
+                                        // 1. Specialty Result (Index 0)
+                                        val specialtySnapshot = results[0] as? QuerySnapshot
+                                        val specialtyName = specialtySnapshot?.documents?.firstOrNull()
+                                            ?.getString("ESPECIALIDAD") ?: "N/A"
+
+                                        // 2. University Result (Index 1)
+                                        val universitySnapshot = results[1] as? QuerySnapshot
+                                        val universityName = universitySnapshot?.documents?.firstOrNull()
+                                            ?.getString("NOMBRE_UNIVERSIDAD") ?: "N/A"
+
+                                        // 3. Hospital Result (Index 2)
+                                        val hospitalSnapshot = results[2] as? QuerySnapshot
+                                        val hospitalName = hospitalSnapshot?.documents?.firstOrNull()
+                                            ?.getString("NOMBRE_HOSPITAL") ?: "N/A" // <<< USAMOS NOMBRE_HOSPITAL
+
+                                        // Crear el mapa completo de datos
+                                        val fullProfileData = doctorData.toMutableMap()
+                                        fullProfileData["NOMBRE_ESPECIALIDAD"] = specialtyName
+                                        fullProfileData["NOMBRE_UNIVERSIDAD"] = universityName
+                                        fullProfileData["NOMBRE_HOSPITAL"] = hospitalName
+
+                                        // Actualizar UI
+                                        tvProfileName?.text = "$name $lastName"
+                                        tvProfileSpecialty?.text = specialtyName
+                                        tvUniversity?.text = "Universidad: $universityName"
+                                        tvExperienceYears?.text = "Años de experiencia: $expAnios"
+                                        tvHospital?.text = "Hospital: $hospitalName"
+                                        tvAdditionalInfo?.text = "Información Adicional: $additionalInfo"
+
+                                        // Configurar el botón de edición
+                                        btnEditProfile?.setOnClickListener {
+                                            showEditProfileDialog(fullProfileData)
+                                        }
+
+                                    }
+                                    .addOnFailureListener { e ->
+                                        Toast.makeText(this, "Error en la búsqueda de datos: ${e.message}", Toast.LENGTH_LONG).show()
+                                    }
+
                             } else {
                                 // In case the document doesn't exist
-                                tvProfileName?.text = "N/A"
-                                tvProfileSpecialty?.text = "N/A"
-                                tvUniversity?.text = "Universidad: N/A"
-                                tvExperienceYears?.text = "Años de experiencia: N/A"
-                                tvHospital?.text = "Hospital: N/A"
-                                tvAdditionalInfo?.text = "Información Adicional: N/A"
+                                // ... update UI with N/A
                             }
                         }
                         .addOnFailureListener { e ->
-                            Toast.makeText(this, "Error al cargar datos: ${e.message}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this, "Error al cargar datos del doctor: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                 } else {
                     // No user logged in
@@ -242,7 +297,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Muestra un diálogo para editar la información del perfil del doctor.
-     * @param doctorData El mapa de datos del doctor recuperado de Firestore.
+     * @param doctorData El mapa de datos del doctor, que ahora incluye los nombres de las colecciones de lookup.
      */
     private fun showEditProfileDialog(doctorData: Map<String, Any>?) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_profile, null)
@@ -264,14 +319,24 @@ class MainActivity : AppCompatActivity() {
         val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
         val btnSave = dialogView.findViewById<Button>(R.id.btnSave)
 
-        // Precargar los datos actuales en los EditText
-        etName.setText(doctorData?.get("name") as? String ?: "")
-        etLastName.setText(doctorData?.get("lastName") as? String ?: "")
-        etSpecialty.setText(doctorData?.get("especialidad") as? String ?: "")
-        etUniversity.setText(doctorData?.get("university") as? String ?: "")
-        etExperienceYears.setText(doctorData?.get("experience_years")?.toString() ?: "")
-        etHospital.setText(doctorData?.get("hospital") as? String ?: "")
-        etAdditionalInfo.setText(doctorData?.get("additional_info") as? String ?: "")
+        // --- PRECARGA DE DATOS ---
+        etName.setText(doctorData?.get("NOMBRE") as? String ?: "")
+        etLastName.setText(doctorData?.get("APELLIDO") as? String ?: "")
+
+        // Usamos los nombres traídos de las lookups y hacemos estos campos de solo lectura
+        etSpecialty.setText(doctorData?.get("NOMBRE_ESPECIALIDAD") as? String ?: "N/A")
+        etSpecialty.isEnabled = false // No se puede editar como texto libre
+
+        etUniversity.setText(doctorData?.get("NOMBRE_UNIVERSIDAD") as? String ?: "N/A")
+        etUniversity.isEnabled = false // No se puede editar como texto libre
+
+        etHospital.setText(doctorData?.get("NOMBRE_HOSPITAL") as? String ?: "N/A")
+        etHospital.isEnabled = false // No se puede editar como texto libre
+
+        etExperienceYears.setText(doctorData?.get("EXP_ANIOS")?.toString() ?: "")
+        // Asumiendo que INFO_ADIC es el campo de la base de datos para Información Adicional
+        etAdditionalInfo.setText(doctorData?.get("INFO_ADIC") as? String ?: "")
+
 
         // Listener para el botón Cancelar
         btnCancel.setOnClickListener {
@@ -282,19 +347,19 @@ class MainActivity : AppCompatActivity() {
         btnSave.setOnClickListener {
             val userId = auth.currentUser?.uid
             if (userId != null) {
-                // Crear un mapa con los datos a actualizar
-                val updatedData = hashMapOf(
-                    "name" to etName.text.toString(),
-                    "lastName" to etLastName.text.toString(),
-                    "especialidad" to etSpecialty.text.toString(),
-                    "university" to etUniversity.text.toString(),
-                    "experience_years" to etExperienceYears.text.toString().toIntOrNull(),
-                    "hospital" to etHospital.text.toString(),
-                    "additional_info" to etAdditionalInfo.text.toString()
+                // Crear un mapa con los datos a actualizar (SOLO campos que son editables)
+                // Usamos Any? para permitir el Int? de toIntOrNull()
+                val updatedData = hashMapOf<String, Any?>(
+                    "NOMBRE" to etName.text.toString(),
+                    "APELLIDO" to etLastName.text.toString(),
+                    "EXP_ANIOS" to etExperienceYears.text.toString().toIntOrNull(),
+                    // Usamos INFO_ADIC basado en el esquema de Firestore
+                    "INFO_ADIC" to etAdditionalInfo.text.toString()
                 )
 
-                // Actualizar el documento en Firestore
-                db.collection("doctores").document(userId).update(updatedData as Map<String, Any>)
+                // Actualizar el documento en la colección 'medicos'
+                // La conversión a Map<String, Any> es segura aquí porque Firestore ignora los valores null en un update.
+                db.collection("medicos").document(userId).update(updatedData as Map<String, Any>)
                     .addOnSuccessListener {
                         Toast.makeText(this, "Perfil actualizado correctamente.", Toast.LENGTH_SHORT).show()
                         dialog.dismiss()
@@ -322,7 +387,7 @@ class MainActivity : AppCompatActivity() {
             val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
             val btnLogout = newLayout.findViewById<Button>(R.id.btnLogout)
 
-            tvWelcome?.text = "Bienvenido,"
+            tvWelcome?.text = "Hola Doctor/a,"
             tvDoctorName?.text = "$name $lastName"
 
             btnLogout?.setOnClickListener {
@@ -345,7 +410,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun goToLogin() {
         val intent = Intent(this, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            .apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
         startActivity(intent)
         finish()
     }

@@ -10,8 +10,10 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Contraseña (Aplicado estilo Rounded) -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilPassword"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
@@ -22,11 +24,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Contraseña"
-                android:inputType="textPassword" />
+                android:inputType="textPassword"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Confirmar Contraseña (Aplicado estilo Rounded) -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilConfirmPassword"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
@@ -37,11 +43,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Confirmar contraseña"
-                android:inputType="textPassword" />
+                android:inputType="textPassword"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Información Adicional (Aplicado estilo Rounded) -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilAdditionalInfo"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
@@ -53,15 +63,20 @@
                 android:hint="Información Adicional"
                 android:inputType="textMultiLine"
                 android:minLines="3"
-                android:gravity="top" />
+                android:gravity="top"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- CheckBox para Términos y Condiciones -->
         <CheckBox
             android:id="@+id/chkAcceptTerms"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Acepto los términos y condiciones y la política de privacidad. Confirmo que soy un profesional médico licenciado."
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp"
+            android:fontFamily="@font/petrona_regular"
+            android:textColor="#1A232A"/>
 
     </LinearLayout>
 </ScrollView>

@@ -21,20 +21,21 @@
             android:layout_marginBottom="24dp">
 
             <ImageView
-                android:layout_width="100dp"
-                android:layout_height="100dp"
-                android:src="@drawable/usuario"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:src="@drawable/ic_register_app"
                 android:contentDescription="@string/app_name"/>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Iniciar Sesión"
-                android:textSize="24sp"
+                android:text="¡Bienvenido!"
+                android:textSize="45sp"
                 android:textStyle="bold"
                 android:gravity="center"
-                android:textColor="@color/colorPrimary"
-                android:layout_marginTop="16dp" />
+                android:textColor="@color/black"
+                android:layout_marginTop="16dp"
+                android:fontFamily="@font/montserrat_bold" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -49,6 +50,7 @@
         <!-- Usuario / Campo colegiatura -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilUsername"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
@@ -59,12 +61,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Ingrese su N° de colegiatura)"
-                android:inputType="textEmailAddress" />
+                android:inputType="textEmailAddress"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Contraseña -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilPassword"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
@@ -76,7 +81,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Contraseña"
-                android:inputType="textPassword" />
+                android:inputType="textPassword"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Botón login -->
@@ -85,10 +92,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Ingresar"
+            android:textSize="20sp"
             android:textAllCaps="false"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/teal_200"
             style="@style/Widget.MaterialComponents.Button"
             app:cornerRadius="8dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:fontFamily="@font/eczar_semibold"/>
 
         <!-- Enlace a registro -->
         <TextView
@@ -96,10 +107,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="¿No tienes cuenta? Regístrate aquí"
+            android:textSize="18sp"
             android:gravity="center"
-            android:textColor="@color/colorPrimary"
+            android:textColor="@color/teal_200"
             android:textStyle="bold"
-            android:padding="12dp" />
+            android:padding="12dp"
+            android:fontFamily="@font/eczar_semibold"/>
 
     </LinearLayout>
 </ScrollView>
