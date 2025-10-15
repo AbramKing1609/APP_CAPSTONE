@@ -12,13 +12,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
-import com.google.firebase.FirebaseApp
-import com.google.firebase.appcheck.appCheck
-import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.functions.FirebaseFunctions
-import com.google.firebase.functions.functions
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 class RegisterActivity : AppCompatActivity() {
@@ -33,12 +30,14 @@ class RegisterActivity : AppCompatActivity() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    // Datos del formulario que se guardarán temporalmente
+    // Datos del formulario que se guardarán temporalmente, usando los nombres de los campos de Firestore
     private val formData = mutableMapOf<String, Any>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.register_activity)
+
+        // Nota: Las importaciones de Firebase AppCheck y Functions han sido eliminadas ya que no se usan en este código.
 
         initViews()
         setupViewPager()
@@ -70,7 +69,8 @@ class RegisterActivity : AppCompatActivity() {
     private fun setupListeners() {
         btnNext.setOnClickListener {
             val currentItem = viewPager.currentItem
-            val currentFragment = supportFragmentManager.findFragmentByTag("f" + currentItem) as? RegisterFragmentInterface
+            // Obtener el fragmento actual por el tag para forzar la validación
+            val currentFragment = supportFragmentManager.findFragmentByTag("f" + viewPager.adapter!!.getItemId(currentItem)) as? RegisterFragmentInterface
             if (currentFragment != null && currentFragment.validateFields()) {
                 viewPager.currentItem = currentItem + 1
             }
@@ -100,29 +100,63 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun registerDoctor() {
-        // Validación final en el último fragmento
-        val lastFragment = supportFragmentManager.findFragmentByTag("f2") as? RegisterFragment3
+        // 1. Validación final en el último fragmento
+        val lastFragment = supportFragmentManager.findFragmentByTag("f" + viewPager.adapter!!.getItemId(2)) as? RegisterFragment3
         if (lastFragment?.validateFields() == true) {
-            val email = formData["email"] as String
+            val email = formData["CORREO"] as String
             val password = lastFragment.getPassword()
 
-            auth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val uid = task.result?.user?.uid ?: return@addOnCompleteListener
-                        formData["uid"] = uid
+            // MODIFICADO: Usamos la clave correcta 'TERMINOSACEPTADO' del esquema.
+            val aceptoTerminos = formData["TERMINOSACEPTADO"] as? Boolean ?: false
 
-                        db.collection("medicos").document(uid).set(formData)
+            // 2. Crear usuario en Firebase Authentication
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener { authTask ->
+                    if (authTask.isSuccessful) {
+                        val uid = authTask.result?.user?.uid ?: return@addOnCompleteListener
+                        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+                        // Campos que se inicializan en el proceso de registro
+                        formData["ID_MEDICO"] = uid
+                        formData["ID_USUARIO"] = uid
+                        formData["FECHAACEPTACION"] = currentDate
+                        formData["PACIENTES_ATENDIDOS"] = 0
+                        formData["FOTO_PERFIL"] = "" // Placeholder para la URL de la foto
+                        // MODIFICADO: Usamos la clave correcta 'TERMINOSACEPTADO'
+                        formData["TERMINOSACEPTADO"] = aceptoTerminos
+
+                        // 3. Crear registro en la colección 'usuario' (Auth data)
+                        val userData = hashMapOf(
+                            "ID_USUARIO" to uid,
+                            "CORREO" to email,
+                            "CONTRASEÑA" to password, // Nota: Esto es solo para fines de demo. En producción, solo se guardaría un hash.
+                            "FECHA_REGISTRO" to currentDate,
+                            "TIPO_USUARIO" to "medico"
+                        )
+
+                        db.collection("usuario").document(uid).set(userData)
                             .addOnSuccessListener {
-                                Toast.makeText(this, "Registro exitoso", Toast.LENGTH_SHORT).show()
-                                startActivity(Intent(this, LoginActivity::class.java))
-                                finish()
+                                // 4. Crear registro en la colección 'medicos' (Profile data)
+                                db.collection("medicos").document(uid).set(formData)
+                                    .addOnSuccessListener {
+                                        Toast.makeText(this, "Registro exitoso", Toast.LENGTH_SHORT).show()
+                                        startActivity(Intent(this, LoginActivity::class.java))
+                                        finish()
+                                    }
+                                    .addOnFailureListener { e ->
+                                        // Si falla el guardado en 'medicos', se debe considerar eliminar el usuario de Auth
+                                        auth.currentUser?.delete()
+                                        Toast.makeText(this, "Error guardando datos del perfil: ${e.message}", Toast.LENGTH_LONG).show()
+                                    }
                             }
                             .addOnFailureListener { e ->
-                                Toast.makeText(this, "Error guardando datos: ${e.message}", Toast.LENGTH_LONG).show()
+                                // Si falla el guardado en 'usuario', se debe considerar eliminar el usuario de Auth
+                                auth.currentUser?.delete()
+                                Toast.makeText(this, "Error guardando datos de usuario: ${e.message}", Toast.LENGTH_LONG).show()
                             }
+
                     } else {
-                        Toast.makeText(this, "Error de autenticación: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Error de autenticación: ${authTask.exception?.message}", Toast.LENGTH_LONG).show()
                     }
                 }
         }
@@ -148,6 +182,15 @@ class RegisterActivity : AppCompatActivity() {
                 2 -> RegisterFragment3()
                 else -> throw IllegalStateException("Invalid position: $position")
             }
+        }
+
+        // Se sobrescribe este método para que findFragmentByTag funcione correctamente
+        override fun getItemId(position: Int): Long {
+            return position.toLong()
+        }
+
+        override fun containsItem(itemId: Long): Boolean {
+            return itemId >= 0 && itemId < itemCount
         }
     }
 }
