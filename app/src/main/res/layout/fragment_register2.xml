@@ -10,89 +10,181 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- HOSPITAL -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilEspecialidad"
+            android:id="@+id/tilHospital"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:errorEnabled="true">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEspecialidad"
+            android:layout_marginBottom="16dp"
+            app:errorEnabled="true"
+            app:endIconMode="dropdown_menu"> <!-- Añadido endIconMode para consistencia si se usa con AutoCompleteTextView -->
+
+            <AutoCompleteTextView
+                android:id="@+id/actvHospital"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Hospital donde labora"
+                android:inputType="textCapWords"
+                android:paddingTop="20dp"
+                android:textSize="16sp"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- ID_ESPECIALIDAD -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilEspecialidad"
+            style="@style/Widget.App.TextInputLayout.Rounded"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:errorEnabled="true"
+            app:endIconMode="dropdown_menu">
+
+            <AutoCompleteTextView
+                android:id="@+id/actvEspecialidad"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Especialidad"
-                android:inputType="textCapWords" />
+                android:inputType="textCapWords"
+                android:paddingTop="20dp"
+                android:textSize="16sp"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- COLEGIATURA (Ajustado a estilo Rounded) -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilColegiatura"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:errorEnabled="true">
+            android:layout_marginBottom="16dp"
+            app:errorEnabled="true"
+            android:hint="N° de Colegiatura">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etColegiatura"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Número de Colegiatura"
-                android:inputType="number" />
+                android:inputType="number"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- ID_UNIVERSIDAD -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilUniversity"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:errorEnabled="true">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etUniversity"
+            android:layout_marginBottom="16dp"
+            app:errorEnabled="true"
+            app:endIconMode="dropdown_menu">
+
+            <AutoCompleteTextView
+                android:id="@+id/actvUniversity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Universidad"
-                android:inputType="textCapWords" />
+                android:inputType="textCapWords"
+                android:paddingTop="20dp"
+                android:textSize="16sp"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- AÑIO_GRADUACION (Ajustado a estilo Rounded) -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilExperienceYears"
+            android:id="@+id/tilGraduationYear"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="16dp"
+            app:errorEnabled="true">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etGraduationYear"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Año de Graduación"
+                android:inputType="number"
+                android:maxLength="4"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+
+        <!-- EXP_ANIOS (Ajustado a estilo Rounded) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilExperienceYears"
+            style="@style/Widget.App.TextInputLayout.Rounded"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
             app:errorEnabled="true">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etExperienceYears"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Años de Experiencia"
-                android:inputType="number" />
+                android:inputType="number"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- PRECIO (Ajustado a estilo Rounded) -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilHospital"
+            android:id="@+id/tilPrice"
+            style="@style/Widget.App.TextInputLayout.Rounded"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:errorEnabled="true"
+            app:prefixText="S/ ">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPrice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Precio de consulta (PRECIO)"
+                android:inputType="numberDecimal"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- DISPONIBILIDAD (Ajustado a estilo Rounded) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilAvailability"
+            style="@style/Widget.App.TextInputLayout.Rounded"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:errorEnabled="true">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etAvailability"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Disponibilidad (DISPONIBILIDAD)"
+                android:inputType="text"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- JORNADA_ATENCION (Ajustado a estilo Rounded) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilWorkingHours"
+            style="@style/Widget.App.TextInputLayout.Rounded"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             app:errorEnabled="true">
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etHospital"
+                android:id="@+id/etWorkingHours"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Hospital/Clínica"
-                android:inputType="textCapWords" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilPrecio"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:errorEnabled="true"
-            app:prefixText="S/ ">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPrecio"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Precio de consulta"
-                android:inputType="numberDecimal" />
+                android:hint="Jornada de Atención (JORNADA_ATENCION)"
+                android:inputType="text"
+                android:fontFamily="@font/comfortaa"
+                android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
     </LinearLayout>

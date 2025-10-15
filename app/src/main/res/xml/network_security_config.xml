@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permite el tráfico HTTP (cleartext) solo para tu API local (10.0.2.2)
+         Esto soluciona el error CLEARTEXT communication. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+    <!-- Si usaras otras APIs en producción, DEBEN usar HTTPS. -->
+</network-security-config>

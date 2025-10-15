@@ -16,8 +16,8 @@
         android:layout_marginBottom="24dp">
 
         <ImageView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="130dp"
+            android:layout_height="130dp"
             android:src="@drawable/ic_register_app"/>
 
         <TextView
@@ -27,17 +27,19 @@
             android:textSize="24sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:textColor="@color/colorPrimary"
-            android:layout_marginTop="16dp" />
+            android:textColor="@color/black"
+            android:layout_marginTop="16dp"
+            android:fontFamily="@font/montserrat_bold" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Complete sus datos para registrarse"
-            android:textSize="14sp"
+            android:text="Llena el siguiente formulario con tus datos personales. Crea una contraseña y registra una cuenta de correo electrónico. "
+            android:textSize="16sp"
             android:gravity="center"
             android:textColor="@color/gray"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/petrona_regular"/>
     </LinearLayout>
 
     <!-- Paginación y navegación -->
@@ -54,7 +56,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:src="@drawable/ic_back"
-            android:tint="@color/colorPrimary"
+            android:tint="@color/teal_200"
             android:layout_marginEnd="16dp"
             android:visibility="invisible"/>
 
@@ -63,16 +65,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="1/3"
-            android:textSize="18sp"
+            android:textSize="30sp"
             android:textColor="@color/black"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:fontFamily="@font/outfit_halloween"/>
 
         <ImageView
             android:id="@+id/btnNext"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:src="@drawable/ic_next"
-            android:tint="@color/colorPrimary"
+            android:tint="@color/teal_200"
             android:layout_marginStart="16dp"/>
 
     </LinearLayout>
@@ -91,20 +94,24 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Registrarse"
+        android:textSize="18sp"
         android:textAllCaps="false"
         style="@style/Widget.MaterialComponents.Button"
         app:cornerRadius="8dp"
         android:layout_marginBottom="24dp"
-        android:visibility="gone" />
+        android:visibility="gone"
+        android:fontFamily="@font/eczar_semibold"/>
 
     <TextView
         android:id="@+id/tvLoginLink"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="¿Ya tienes una cuenta? Iniciar sesión"
+        android:textSize="18sp"
         android:gravity="center"
-        android:textColor="@color/colorPrimary"
+        android:textColor="@color/teal_200"
         android:textStyle="bold"
-        android:padding="12dp" />
+        android:padding="12dp"
+        android:fontFamily="@font/eczar_semibold"/>
 
 </LinearLayout>

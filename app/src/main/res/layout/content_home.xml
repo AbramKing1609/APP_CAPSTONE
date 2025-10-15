@@ -14,7 +14,7 @@
             android:id="@+id/tvWelcome"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bienvenido,"
+            android:text="Hola Doctor/a,"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@android:color/black" />
@@ -23,21 +23,10 @@
             android:id="@+id/tvDoctorName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Andy Cuyotupac"
+            android:text="Cargando Nombre..."
             android:textSize="18sp"
             android:textColor="@android:color/black"
             android:layout_marginBottom="24dp" />
-
-        <!-- Título principal -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Consultas Perú"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="24dp"
-            android:textColor="@color/peru_red" />
 
         <!-- Tarjeta de pagos -->
         <LinearLayout
@@ -60,8 +49,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_payments"
-                android:tint="@color/peru_red" />
+                android:src="@drawable/ic_payments" />
 
         </LinearLayout>
 
@@ -85,7 +73,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Las notificaciones les verificará los nuevos pacientes que tienen"
+                    android:text="Las notificaciones les verificarán los nuevos pacientes que tienen"
                     android:textSize="14sp"
                     android:layout_marginBottom="8dp"
                     android:textColor="@android:color/black" />
@@ -94,8 +82,7 @@
                     android:layout_width="28dp"
                     android:layout_height="28dp"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_notifications"
-                    android:tint="@color/peru_red" />
+                    android:src="@drawable/ic_notifications"/>
             </LinearLayout>
 
             <!-- Tarjeta de pacientes -->
@@ -120,8 +107,7 @@
                     android:layout_width="28dp"
                     android:layout_height="28dp"
                     android:layout_gravity="center"
-                    android:src="@drawable/ic_patients"
-                    android:tint="@color/peru_red" />
+                    android:src="@drawable/ic_patients" />
 
             </LinearLayout>
         </LinearLayout>
@@ -148,8 +134,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_calendar"
-                android:tint="@color/peru_red" />
+                android:src="@drawable/ic_calendar" />
         </LinearLayout>
 
         <Button
