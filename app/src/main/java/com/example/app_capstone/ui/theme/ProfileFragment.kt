@@ -2,6 +2,7 @@ package com.example.app_capstone
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.TimePickerDialog // ⬅️ NUEVO: Para seleccionar la hora
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
@@ -19,20 +20,25 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.storage.FirebaseStorage
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-import android.app.Activity // Import para Activity.RESULT_OK
+import android.app.Activity
+import java.util.Calendar // ⬅️ NUEVO: Para obtener la hora/fecha actual
+import com.google.android.material.datepicker.MaterialDatePicker
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ProfileActivity : AppCompatActivity() {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+    private val storage = FirebaseStorage.getInstance()
 
     private val PICK_IMAGE_REQUEST = 100
-    private val PERMISSION_REQUEST_CODE = 200 // Nuevo código para la solicitud de permiso
-    private val PROFILE_IMAGE_FILENAME = "profile_image.jpg"
-    private lateinit var ivProfilePicture: ImageView // Declarada aquí para usarla en los métodos
+    private val PERMISSION_REQUEST_CODE = 200
+    private lateinit var ivProfilePicture: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,9 +54,14 @@ class ProfileActivity : AppCompatActivity() {
         val tvAge = findViewById<TextView>(R.id.tvAge)
         val etContactNumber = findViewById<EditText>(R.id.etContactNumber)
 
-        // 🔹 NUEVOS CAMPOS agregados
+        // 🔹 NUEVOS CAMPOS (Distrito, Nacionalidad)
         val tvDistrito = findViewById<TextView>(R.id.tvDistrito)
         val tvNacionalidad = findViewById<TextView>(R.id.tvNacionalidad)
+
+        // 🔹 CAMPOS DE HORARIO/FECHAS
+        val tvHorario = findViewById<TextView>(R.id.tvHorario)
+        val tvFechasAtencion = findViewById<TextView>(R.id.tvFechasAtencion)
+
 
         // 🔹 Iconos de edición
         val ivEditName = findViewById<ImageView>(R.id.ivEditName)
@@ -66,13 +77,19 @@ class ProfileActivity : AppCompatActivity() {
         val ivEditDistrito = findViewById<ImageView>(R.id.ivEditDistrito)
         val ivEditNacionalidad = findViewById<ImageView>(R.id.ivEditNacionalidad)
 
+        // 🔹 ICONOS DE HORARIO/FECHAS
+        val ivEditHorario = findViewById<ImageView>(R.id.ivEditHorario)
+        val ivEditFechasAtencion = findViewById<ImageView>(R.id.ivEditFechasAtencion)
+
+
         // 🔹 Referencia a la imagen de perfil
         ivProfilePicture = findViewById<ImageView>(R.id.ivProfilePicture)
 
-        // 🔹 Cargar la foto guardada localmente si existe
-        loadLocalImage()
+        // 🔹 Cargar la foto desde Firestore/Storage
+        loadProfileData() // ⬅️ Llamada principal para cargar datos y foto
 
-        // 🔹 Al hacer clic, abrir galería para cambiar foto - AHORA CON CHEQUEO DE PERMISOS
+
+        // 🔹 Al hacer clic, abrir galería para cambiar foto
         ivProfilePicture.setOnClickListener {
             checkAndOpenGallery()
         }
@@ -85,6 +102,170 @@ class ProfileActivity : AppCompatActivity() {
             return
         }
 
+        val userId = currentUser.uid
+
+        // 📝 Funciones de edición de campos de texto/número
+        ivEditName.setOnClickListener {
+            editField("NOMBRE", tvProfileName.text.toString(), tvProfileName)
+        }
+
+        ivEditAge.setOnClickListener {
+            editField("EDAD", tvAge.text.toString().replace(" años", ""), tvAge, " años")
+        }
+
+        ivEditExperience.setOnClickListener {
+            editField("EXP_ANIOS", tvExperienceYears.text.toString(), tvExperienceYears)
+        }
+
+        ivEditAdditionalInfo.setOnClickListener {
+            editField("INFO_ADIC", tvAdditionalInfo.text.toString(), tvAdditionalInfo)
+        }
+
+        ivEditPhone.setOnClickListener {
+            editField("CONTACTO", etContactNumber.text.toString(), etContactNumber)
+        }
+
+        // -------------------------------------------------------------
+        // ⏰ NUEVO: Listener para el selector de RANGO DE HORA
+        // -------------------------------------------------------------
+        ivEditHorario.setOnClickListener {
+            showTimeRangePickerDialog(tvHorario)
+        }
+
+        // 📅 NUEVO: Listener para el selector de DÍAS DE ATENCIÓN
+        // -------------------------------------------------------------
+        ivEditFechasAtencion.setOnClickListener {
+            showCalendarPicker(tvFechasAtencion)
+        }
+
+        // -------------------------------------------------------------
+        // 🔹 Funciones autoincrementales (sin cambios)
+        // -------------------------------------------------------------
+
+        ivEditUniversity.setOnClickListener {
+            editFieldWithAutoCreate(
+                collectionName = "universidad",
+                idFieldName = "ID_UNIVERSIDAD",
+                nameFieldName = "NOMBRE_UNIVERSIDAD",
+                currentName = tvUniversity.text.toString(),
+                textView = tvUniversity,
+                medicoFieldKey = "ID_UNIVERSIDAD"
+            )
+        }
+
+        ivEditHospital.setOnClickListener {
+            editFieldWithAutoCreate(
+                collectionName = "hospital",
+                idFieldName = "ID_HOSPITAL",
+                nameFieldName = "NOMBRE_HOSPITAL",
+                currentName = tvHospital.text.toString(),
+                textView = tvHospital,
+                medicoFieldKey = "ID_HOSPITAL"
+            )
+        }
+
+        ivEditSpecialty.setOnClickListener {
+            editFieldWithAutoCreate(
+                collectionName = "especialidad",
+                idFieldName = "ID_ESPECIALIDAD",
+                nameFieldName = "ESPECIALIDAD",
+                currentName = tvProfileSpecialty.text.toString(),
+                textView = tvProfileSpecialty,
+                medicoFieldKey = "ID_ESPECIALIDAD"
+            )
+        }
+
+        ivEditDistrito.setOnClickListener {
+            editFieldWithAutoCreate(
+                collectionName = "distrito",
+                idFieldName = "ID_DISTRITO",
+                nameFieldName = "NOMBRE_DISTRITO",
+                currentName = tvDistrito.text.toString(),
+                textView = tvDistrito,
+                medicoFieldKey = "ID_DISTRITO"
+            )
+        }
+
+        ivEditNacionalidad.setOnClickListener {
+            editFieldWithAutoCreate(
+                collectionName = "nacionalidad",
+                idFieldName = "ID_NACIONALIDAD",
+                nameFieldName = "NACIONALIDAD",
+                currentName = tvNacionalidad.text.toString(),
+                textView = tvNacionalidad,
+                medicoFieldKey = "ID_NACIONALIDAD"
+            )
+        }
+    }
+
+    /**
+     * Muestra dos TimePickerDialogs secuenciales para seleccionar el rango de hora de atención (INICIO y FIN).
+     * Actualiza el campo HORARIO_ATENCION en Firestore.
+     */
+    private fun showTimeRangePickerDialog(textView: TextView) {
+        val userId = auth.currentUser?.uid ?: return
+
+        fun addTimeRange() {
+            val calendar = Calendar.getInstance()
+            val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+            val currentMinute = calendar.get(Calendar.MINUTE)
+
+            val startTimePicker = TimePickerDialog(
+                this,
+                { _, startHour, startMinute ->
+                    val endTimePicker = TimePickerDialog(
+                        this,
+                        { _, endHour, endMinute ->
+                            if (endHour * 60 + endMinute <= startHour * 60 + startMinute) {
+                                Toast.makeText(this, "La hora de fin debe ser posterior a la de inicio.", Toast.LENGTH_LONG).show()
+                                return@TimePickerDialog
+                            }
+
+                            val rangeStr = String.format("%02d:%02d - %02d:%02d", startHour, startMinute, endHour, endMinute)
+
+                            // Leer horarios existentes de Firestore
+                            db.collection("medicos").document(userId).get()
+                                .addOnSuccessListener { doc ->
+                                    val existingRanges = doc.get("HORARIO_ATENCION") as? MutableList<String> ?: mutableListOf()
+                                    existingRanges.add(rangeStr)
+
+                                    db.collection("medicos").document(userId)
+                                        .update("HORARIO_ATENCION", existingRanges)
+                                        .addOnSuccessListener {
+                                            textView.text = existingRanges.joinToString(" | ") { "🕒 $it" }
+                                            Toast.makeText(this, "Horario agregado", Toast.LENGTH_SHORT).show()
+                                        }
+                                }
+                        },
+                        startHour + 1,
+                        startMinute,
+                        true
+                    )
+                    endTimePicker.setTitle("Seleccionar hora de FIN")
+                    endTimePicker.show()
+                },
+                currentHour,
+                currentMinute,
+                true
+            )
+            startTimePicker.setTitle("Seleccionar hora de INICIO")
+            startTimePicker.show()
+        }
+
+        addTimeRange()
+    }
+
+
+    /**
+     * Muestra un AlertDialog con checkboxes para seleccionar los días de atención.
+     * Actualiza el campo DIAS_ATENCION en Firestore como un array de strings.
+     */
+
+    /**
+     * Carga todos los datos del perfil, incluida la foto de perfil y los nuevos campos de horario/fechas.
+     */
+    private fun loadProfileData() {
+        val currentUser = auth.currentUser ?: return
         val userId = currentUser.uid
 
         // 🔹 Cargar datos del médico
@@ -108,6 +289,24 @@ class ProfileActivity : AppCompatActivity() {
                 val idNacionalidad = doctorData["ID_NACIONALIDAD"] as? Long
                 val expAnios = doctorData["EXP_ANIOS"]?.toString() ?: "N/A"
                 val additionalInfo = doctorData["INFO_ADIC"] as? String ?: "N/A"
+                val photoUrl = doctorData["FOTO_PERFIL"] as? String
+
+                // ⏰ NUEVOS CAMPOS DE HORARIO Y FECHAS
+                val horarioList = doctorData["HORARIO_ATENCION"] as? List<String> ?: listOf("N/A")
+                val diasList = doctorData["DIAS_ATENCION"] as? List<String> ?: listOf("N/A")
+
+                // 🔹 Lógica para cargar la imagen de perfil
+                if (!photoUrl.isNullOrEmpty()) {
+                    Glide.with(this)
+                        .load(photoUrl)
+                        .circleCrop()
+                        .placeholder(R.drawable.ic_profile)
+                        .error(R.drawable.ic_profile)
+                        .into(ivProfilePicture)
+                } else {
+                    ivProfilePicture.setImageResource(R.drawable.ic_profile)
+                }
+
 
                 val specialtyTask = idEspecialidad?.let {
                     db.collection("especialidad")
@@ -127,7 +326,6 @@ class ProfileActivity : AppCompatActivity() {
                         .limit(1).get()
                 } ?: Tasks.forResult(null as QuerySnapshot?)
 
-                // 🔹 NUEVAS CONSULTAS
                 val distritoTask = idDistrito?.let {
                     db.collection("distrito")
                         .whereEqualTo("ID_DISTRITO", it)
@@ -164,122 +362,52 @@ class ProfileActivity : AppCompatActivity() {
                         ?.documents?.firstOrNull()?.getString("NACIONALIDAD") ?: "N/A"
 
                     // 🔹 Mostrar datos
-                    tvProfileName.text = "$name $lastName"
-                    tvProfileSpecialty.text = specialtyName
-                    etContactNumber.setText(telefono)
-                    tvAge.text = "$edad años"
-                    tvUniversity.text = universityName
-                    tvExperienceYears.text = expAnios
-                    tvHospital.text = hospitalName
-                    tvAdditionalInfo.text = additionalInfo
-                    tvDistrito.text = distritoName
-                    tvNacionalidad.text = nacionalidadName
+                    findViewById<TextView>(R.id.tvProfileName).text = "$name $lastName"
+                    findViewById<TextView>(R.id.tvProfileSpecialty).text = specialtyName
+                    findViewById<EditText>(R.id.etContactNumber).setText(telefono)
+                    findViewById<TextView>(R.id.tvAge).text = "$edad años"
+                    findViewById<TextView>(R.id.tvUniversity).text = universityName
+                    findViewById<TextView>(R.id.tvExperienceYears).text = expAnios
+                    findViewById<TextView>(R.id.tvHospital).text = hospitalName
+                    findViewById<TextView>(R.id.tvAdditionalInfo).text = additionalInfo
+                    findViewById<TextView>(R.id.tvDistrito).text = distritoName
+                    findViewById<TextView>(R.id.tvNacionalidad).text = nacionalidadName
+
+// ⏰ Mostrar Horario y Fechas (listas)
+                    val tvHorario = findViewById<TextView>(R.id.tvHorario)
+                    val tvFechas = findViewById<TextView>(R.id.tvFechasAtencion)
+
+// Concatenar horarios con separador " | "
+                    val displayHorarios = if (horarioList.isNotEmpty() && horarioList[0] != "N/A") {
+                        horarioList.joinToString(" | ") { "🕒 $it" }
+                    } else "🕒 N/A - N/A"
+
+// Concatenar fechas con separador " " (espacio ancho)
+                    val displayFechas = if (diasList.isNotEmpty() && diasList[0] != "N/A") {
+                        diasList.joinToString(" ") { "📅 $it" }
+                    } else "📅 N/A"
+
+                    tvHorario.text = displayHorarios
+                    tvFechas.text = displayFechas
+
+
                 }
             }
-
-        // 📝 Funciones de edición
-        ivEditName.setOnClickListener {
-            editField("NOMBRE", tvProfileName.text.toString(), tvProfileName)
-        }
-
-        ivEditAge.setOnClickListener {
-            editField("EDAD", tvAge.text.toString().replace(" años", ""), tvAge, " años")
-        }
-
-        ivEditExperience.setOnClickListener {
-            editField("EXP_ANIOS", tvExperienceYears.text.toString(), tvExperienceYears)
-        }
-
-        // 🔹 Actualizado: universidad, hospital, especialidad con creación automática
-        ivEditUniversity.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "universidad",
-                idFieldName = "ID_UNIVERSIDAD",
-                nameFieldName = "NOMBRE_UNIVERSIDAD",
-                currentName = tvUniversity.text.toString(),
-                textView = tvUniversity,
-                medicoFieldKey = "ID_UNIVERSIDAD"
-            )
-        }
-
-        ivEditHospital.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "hospital",
-                idFieldName = "ID_HOSPITAL",
-                nameFieldName = "NOMBRE_HOSPITAL",
-                currentName = tvHospital.text.toString(),
-                textView = tvHospital,
-                medicoFieldKey = "ID_HOSPITAL"
-            )
-        }
-
-        ivEditSpecialty.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "especialidad",
-                idFieldName = "ID_ESPECIALIDAD",
-                nameFieldName = "ESPECIALIDAD",
-                currentName = tvProfileSpecialty.text.toString(),
-                textView = tvProfileSpecialty,
-                medicoFieldKey = "ID_ESPECIALIDAD"
-            )
-        }
-
-        // 🔹 Nuevas funciones autoincrementales
-        ivEditDistrito.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "distrito",
-                idFieldName = "ID_DISTRITO",
-                nameFieldName = "NOMBRE_DISTRITO",
-                currentName = tvDistrito.text.toString(),
-                textView = tvDistrito,
-                medicoFieldKey = "ID_DISTRITO"
-            )
-        }
-
-        ivEditNacionalidad.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "nacionalidad",
-                idFieldName = "ID_NACIONALIDAD",
-                nameFieldName = "NACIONALIDAD",
-                currentName = tvNacionalidad.text.toString(),
-                textView = tvNacionalidad,
-                medicoFieldKey = "ID_NACIONALIDAD"
-            )
-        }
-
-        ivEditAdditionalInfo.setOnClickListener {
-            editField("INFO_ADIC", tvAdditionalInfo.text.toString(), tvAdditionalInfo)
-        }
-
-        ivEditPhone.setOnClickListener {
-            editField("CONTACTO", etContactNumber.text.toString(), etContactNumber)
-        }
-    }
-
-    /**
-     * Carga la imagen de perfil guardada localmente si existe.
-     */
-    private fun loadLocalImage() {
-        val imageFile = File(filesDir, PROFILE_IMAGE_FILENAME)
-        if (imageFile.exists()) {
-            try {
-                val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
-                ivProfilePicture.setImageBitmap(bitmap)
-            } catch (e: Exception) {
-                Log.e("ProfileActivity", "Error loading local image", e)
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al cargar datos del perfil", e)
+                Toast.makeText(this, "Error al cargar datos del perfil.", Toast.LENGTH_SHORT).show()
             }
-        }
     }
+
 
     /**
      * Verifica los permisos de lectura de almacenamiento antes de abrir la galería.
-     * Se ha actualizado para usar READ_MEDIA_IMAGES en Android 13+ (API 33+).
      */
     private fun checkAndOpenGallery() {
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES // Android 13 (API 33) y superior
+            Manifest.permission.READ_MEDIA_IMAGES
         } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE // Versiones anteriores a Android 13
+            Manifest.permission.READ_EXTERNAL_STORAGE
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -287,7 +415,6 @@ class ProfileActivity : AppCompatActivity() {
                 == PackageManager.PERMISSION_GRANTED) {
                 openGallery()
             } else {
-                // Solicitar el permiso adecuado
                 ActivityCompat.requestPermissions(
                     this,
                     arrayOf(permission),
@@ -295,7 +422,6 @@ class ProfileActivity : AppCompatActivity() {
                 )
             }
         } else {
-            // Permisos concedidos automáticamente en versiones anteriores a M
             openGallery()
         }
     }
@@ -320,17 +446,15 @@ class ProfileActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permiso concedido, abrir la galería
                 openGallery()
             } else {
-                // Permiso denegado, mostrar un mensaje al usuario
                 Toast.makeText(this, "Permiso de almacenamiento denegado. No se puede seleccionar la foto.", Toast.LENGTH_LONG).show()
             }
         }
     }
 
 
-    // 🔧 Genérico para campos simples
+    // 🔧 Funciones de edición (sin cambios)
     private fun editField(fieldKey: String, currentValue: String, textView: TextView, suffix: String = "") {
         val editText = EditText(this)
         editText.setText(currentValue)
@@ -356,7 +480,6 @@ class ProfileActivity : AppCompatActivity() {
             .show()
     }
 
-    // 🔧 Sobrecarga para EditText (como el número de contacto)
     private fun editField(fieldKey: String, currentValue: String, editTextField: EditText, suffix: String = "") {
         val editText = EditText(this)
         editText.setText(currentValue)
@@ -382,9 +505,6 @@ class ProfileActivity : AppCompatActivity() {
             .show()
     }
 
-    // 🧩 Nueva función: crear registro si no existe (autoincremental)
-// 🧩 Nueva versión mejorada: evita duplicados por mayúsculas/minúsculas
-// y mapea países/variantes a un nombre canónico (ej: "peru", "perú", "peruana" -> "peruana")
     private fun editFieldWithAutoCreate(
         collectionName: String,
         idFieldName: String,
@@ -396,7 +516,7 @@ class ProfileActivity : AppCompatActivity() {
         val editText = EditText(this)
         editText.setText(currentName)
 
-        // ---- Tabla de equivalencias (puedes ampliar) ----
+        // ---- Tabla de equivalencias (sin cambios) ----
         val synonyms = mapOf(
             // Perú
             "peru" to "peruana",
@@ -456,7 +576,7 @@ class ProfileActivity : AppCompatActivity() {
                 val normalizedNew = normalize(newNameRaw)
                 val canonicalKey = synonyms[normalizedNew] ?: normalizedNew // si hay sinónimo, usamos la forma canónica
 
-// 🔹 Si estamos en la colección "nacionalidad", forzamos la forma femenina con mayúscula inicial
+                // 🔹 Si estamos en la colección "nacionalidad", forzamos la forma femenina con mayúscula inicial
                 val displayCanonical = if (collectionName == "nacionalidad") {
                     canonicalKey.replaceFirstChar { it.uppercase() } // Ej: "mexicana" → "Mexicana"
                 } else {
@@ -543,27 +663,92 @@ class ProfileActivity : AppCompatActivity() {
             val imageUri: Uri = data.data!!
 
             // 1. Mostrar la imagen seleccionada usando Glide
-            Glide.with(this).load(imageUri).into(ivProfilePicture)
-
-            // 2. Guardar la imagen localmente
-            saveImageToInternalStorage(imageUri)
+            Glide.with(this).load(imageUri).circleCrop().into(ivProfilePicture)
+            // 2. Guardar la imagen en Firebase Storage y actualizar Firestore
+            uploadImageToFirebase(imageUri)
         }
     }
 
-    private fun saveImageToInternalStorage(imageUri: Uri) {
-        try {
-            // Uso de .use{} para asegurar que los recursos (streams) se cierren automáticamente
-            contentResolver.openInputStream(imageUri)?.use { inputStream ->
-                File(filesDir, PROFILE_IMAGE_FILENAME).outputStream().use { outputStream ->
-                    inputStream.copyTo(outputStream)
+    /**
+     * Sube la imagen a Firebase Storage y guarda la URL en Firestore.
+     */
+    private fun uploadImageToFirebase(imageUri: Uri) {
+        val userId = auth.currentUser?.uid ?: run {
+            Toast.makeText(this, "Error: No hay usuario autenticado.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 1. Crear referencia en Storage: 'profile_images/UID_del_medico.jpg'
+        val storageRef = storage.reference.child("profile_images/$userId.jpg")
+
+        // 2. Subir el archivo
+        storageRef.putFile(imageUri)
+            .addOnSuccessListener { taskSnapshot ->
+                // 3. Obtener la URL de descarga
+                taskSnapshot.metadata?.reference?.downloadUrl?.addOnSuccessListener { uri ->
+                    val downloadUrl = uri.toString()
+
+                    // 4. Actualizar el campo FOTO_PERFIL en Firestore
+                    db.collection("medicos").document(userId)
+                        .update("FOTO_PERFIL", downloadUrl)
+                        .addOnSuccessListener {
+                            Toast.makeText(this, "Foto de perfil actualizada en la nube.", Toast.LENGTH_LONG).show()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(this, "Error al guardar URL en Firestore.", Toast.LENGTH_LONG).show()
+                        }
                 }
             }
-            Toast.makeText(this, "Foto guardada en el dispositivo", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // Mensaje de error más descriptivo
-            Toast.makeText(this, "Error al guardar la foto: ${e.message}", Toast.LENGTH_LONG).show()
-        }
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al subir la imagen a Storage", e)
+                Toast.makeText(this, "Fallo al subir la foto.", Toast.LENGTH_LONG).show()
+            }
     }
 
+    private fun showCalendarPicker(textView: TextView) {
+        val userId = auth.currentUser?.uid ?: return
+
+        val builder = MaterialDatePicker.Builder.dateRangePicker()
+        builder.setTitleText("Seleccionar fechas de atención")
+        val picker = builder.build()
+
+        picker.show(supportFragmentManager, picker.toString())
+
+        picker.addOnPositiveButtonClickListener { selection ->
+            val startDate = selection.first
+            val endDate = selection.second
+
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            val datesList = mutableListOf<String>()
+            val calendar = Calendar.getInstance()
+            calendar.timeInMillis = startDate
+            calendar.set(Calendar.HOUR_OF_DAY, 12) // 🔹 Evita desfase por zona horaria
+            val endCal = Calendar.getInstance()
+            endCal.timeInMillis = endDate
+            endCal.set(Calendar.HOUR_OF_DAY, 12)
+
+            while (!calendar.after(endCal)) {  // 🔹 Mejor usar !after para incluir el último día
+                datesList.add(sdf.format(calendar.time))
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            }
+
+            // Obtener fechas existentes y agregar nuevo rango
+            db.collection("medicos").document(userId).get()
+                .addOnSuccessListener { doc ->
+                    val existingDates = doc.get("DIAS_ATENCION") as? MutableList<String> ?: mutableListOf()
+                    existingDates.addAll(datesList)
+                    existingDates.sort() // opcional, para ordenar fechas
+
+                    db.collection("medicos").document(userId)
+                        .update("DIAS_ATENCION", existingDates)
+                        .addOnSuccessListener {
+                            textView.text = existingDates.joinToString(" ") { "📅 $it" }
+                            Toast.makeText(this, "Fechas agregadas correctamente", Toast.LENGTH_SHORT).show()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(this, "Error al actualizar fechas", Toast.LENGTH_SHORT).show()
+                        }
+                }
+        }
+    }
 }
