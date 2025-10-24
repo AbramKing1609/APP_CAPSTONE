@@ -364,7 +364,7 @@
                 android:src="@drawable/ic_edit" />
         </LinearLayout>
 
-        <!-- Horario -->
+        <!-- HORARIO DE ATENCIÓN (EDITABLE) -->
         <TextView
             android:text="Horario de Atención:"
             android:textSize="18sp"
@@ -374,13 +374,27 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
-        <TextView
-            android:id="@+id/tvHorario"
-            android:text="🕒 10:00pm - 11:00pm"
-            android:textSize="18sp"
-            android:layout_marginTop="4dp"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvHorario"
+                android:text="🕒 10:00pm - 11:00pm"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <ImageView
+                android:id="@+id/ivEditHorario"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_access_time" />
+        </LinearLayout>
 
         <!-- Contraseña -->
         <TextView
@@ -402,7 +416,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center" />
 
-        <!-- Fechas de Atención -->
+        <!-- FECHAS DE ATENCIÓN (EDITABLE) -->
         <TextView
             android:text="Fechas de Atención:"
             android:textSize="18sp"
@@ -412,13 +426,27 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
-        <TextView
-            android:id="@+id/tvFechasAtencion"
-            android:text="📅 Lunes Miércoles Viernes"
-            android:textSize="18sp"
-            android:layout_marginTop="4dp"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvFechasAtencion"
+                android:text="📅 Lunes Miércoles Viernes"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <ImageView
+                android:id="@+id/ivEditFechasAtencion"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_calendar_today" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>
