@@ -1,18 +1,38 @@
 package com.example.app_capstone
 
+import android.Manifest
 import android.app.AlertDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import android.app.Activity // Import para Activity.RESULT_OK
 
 class ProfileActivity : AppCompatActivity() {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+
+    private val PICK_IMAGE_REQUEST = 100
+    private val PERMISSION_REQUEST_CODE = 200 // Nuevo código para la solicitud de permiso
+    private val PROFILE_IMAGE_FILENAME = "profile_image.jpg"
+    private lateinit var ivProfilePicture: ImageView // Declarada aquí para usarla en los métodos
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +65,18 @@ class ProfileActivity : AppCompatActivity() {
         // 🔹 NUEVOS ICONOS agregados
         val ivEditDistrito = findViewById<ImageView>(R.id.ivEditDistrito)
         val ivEditNacionalidad = findViewById<ImageView>(R.id.ivEditNacionalidad)
+
+        // 🔹 Referencia a la imagen de perfil
+        ivProfilePicture = findViewById<ImageView>(R.id.ivProfilePicture)
+
+        // 🔹 Cargar la foto guardada localmente si existe
+        loadLocalImage()
+
+        // 🔹 Al hacer clic, abrir galería para cambiar foto - AHORA CON CHEQUEO DE PERMISOS
+        ivProfilePicture.setOnClickListener {
+            checkAndOpenGallery()
+        }
+
 
         val currentUser = auth.currentUser
         if (currentUser == null) {
@@ -224,6 +256,80 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Carga la imagen de perfil guardada localmente si existe.
+     */
+    private fun loadLocalImage() {
+        val imageFile = File(filesDir, PROFILE_IMAGE_FILENAME)
+        if (imageFile.exists()) {
+            try {
+                val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
+                ivProfilePicture.setImageBitmap(bitmap)
+            } catch (e: Exception) {
+                Log.e("ProfileActivity", "Error loading local image", e)
+            }
+        }
+    }
+
+    /**
+     * Verifica los permisos de lectura de almacenamiento antes de abrir la galería.
+     * Se ha actualizado para usar READ_MEDIA_IMAGES en Android 13+ (API 33+).
+     */
+    private fun checkAndOpenGallery() {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES // Android 13 (API 33) y superior
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE // Versiones anteriores a Android 13
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this, permission)
+                == PackageManager.PERMISSION_GRANTED) {
+                openGallery()
+            } else {
+                // Solicitar el permiso adecuado
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(permission),
+                    PERMISSION_REQUEST_CODE
+                )
+            }
+        } else {
+            // Permisos concedidos automáticamente en versiones anteriores a M
+            openGallery()
+        }
+    }
+
+    /**
+     * Abre la actividad de la galería para seleccionar una imagen.
+     */
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.type = "image/*"
+        startActivityForResult(intent, PICK_IMAGE_REQUEST)
+    }
+
+    /**
+     * Maneja el resultado de la solicitud de permisos.
+     */
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permiso concedido, abrir la galería
+                openGallery()
+            } else {
+                // Permiso denegado, mostrar un mensaje al usuario
+                Toast.makeText(this, "Permiso de almacenamiento denegado. No se puede seleccionar la foto.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+
     // 🔧 Genérico para campos simples
     private fun editField(fieldKey: String, currentValue: String, textView: TextView, suffix: String = "") {
         val editText = EditText(this)
@@ -376,7 +482,7 @@ class ProfileActivity : AppCompatActivity() {
                             updateMedicoField(userId, medicoFieldKey, existingId, textView, displayName)
                         } else {
                             // No existe — crear nuevo registro autoincremental
-                            collectionRef.orderBy(idFieldName, com.google.firebase.firestore.Query.Direction.DESCENDING)
+                            collectionRef.orderBy(idFieldName, Query.Direction.DESCENDING)
                                 .limit(1)
                                 .get()
                                 .addOnSuccessListener { maxResult ->
@@ -429,4 +535,35 @@ class ProfileActivity : AppCompatActivity() {
                 Toast.makeText(this, "Error al actualizar médico", Toast.LENGTH_SHORT).show()
             }
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data?.data != null) {
+            val imageUri: Uri = data.data!!
+
+            // 1. Mostrar la imagen seleccionada usando Glide
+            Glide.with(this).load(imageUri).into(ivProfilePicture)
+
+            // 2. Guardar la imagen localmente
+            saveImageToInternalStorage(imageUri)
+        }
+    }
+
+    private fun saveImageToInternalStorage(imageUri: Uri) {
+        try {
+            // Uso de .use{} para asegurar que los recursos (streams) se cierren automáticamente
+            contentResolver.openInputStream(imageUri)?.use { inputStream ->
+                File(filesDir, PROFILE_IMAGE_FILENAME).outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            Toast.makeText(this, "Foto guardada en el dispositivo", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Mensaje de error más descriptivo
+            Toast.makeText(this, "Error al guardar la foto: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
 }
