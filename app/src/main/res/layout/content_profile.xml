@@ -1,462 +1,556 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- 1. Contenedor Principal: Un LinearLayout que contendrá (Header + ScrollView + Footer) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
     android:background="#F5F5F5">
 
-    <LinearLayout
+    <!-- ============================================== -->
+    <!-- ⬆️ ENCABEZADO SUPERIOR VERDE/CIAN (NO SCROLLABLE) -->
+    <!-- ============================================== -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:layout_height="40dp"
+        android:background="@drawable/header_top_background"
+        android:paddingTop="10dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
 
-        <!-- 🩺 Título -->
+        <!-- Este es el contenido del Header: Título central (Dr_Pe) y barra de estado si fuera necesario. -->
+        <!-- La forma con esquinas redondeadas se define en el drawable/header_top_background.xml (que necesitarías crear) -->
         <TextView
-            android:id="@+id/tvProfileTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🩺 Perfil Profesional"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#000000"
-            android:layout_gravity="center"
-            android:layout_marginBottom="16dp" />
-
-        <!-- 👤 Foto de perfil -->
-        <FrameLayout
-            android:layout_width="140dp"
-            android:layout_height="140dp"
-            android:layout_gravity="center">
-
-            <ImageView
-                android:id="@+id/ivProfilePicture"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_profile"
-                android:scaleType="centerCrop"
-                android:background="@drawable/circle_background"
-                android:contentDescription="Foto de perfil" />
-
-            <ImageView
-                android:id="@+id/ivCameraIcon"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="bottom|end"
-                android:layout_margin="8dp"
-                android:padding="8dp"
-                android:background="@drawable/circle_icon_background"
-                android:src="@drawable/ic_camera" />
-        </FrameLayout>
-
-        <!-- 🔹 Datos Personales -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Datos Personales"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="#6200EE"
-            android:layout_marginTop="24dp" />
-
-        <!-- Nombre -->
-        <TextView
-            android:text="Nombre:"
-            android:textSize="18sp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvProfileName"
-                android:text="Abdullah"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditName"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Número de Contacto -->
-        <TextView
-            android:text="Número de Contacto:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <EditText
-                android:id="@+id/etContactNumber"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="+51 996542021"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:inputType="phone"
-                android:background="@android:color/transparent"
-                android:textColor="#000000"
-                android:maxLength="15"
-                android:enabled="true" />
-
-            <ImageView
-                android:id="@+id/ivEditPhone"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Edad -->
-        <TextView
-            android:text="Edad:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvAge"
-                android:text="67 años"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditAge"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Especialidad -->
-        <TextView
-            android:text="Especialidad:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvProfileSpecialty"
-                android:text="Psiquiatría"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditDescription"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Años de experiencia -->
-        <TextView
-            android:text="Años de Experiencia:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvExperienceYears"
-                android:text="10"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditExperience"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Universidad -->
-        <TextView
-            android:text="Universidad:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvUniversity"
-                android:text="Universidad Nacional Mayor de San Marcos"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditUniversity"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Hospital -->
-        <TextView
-            android:text="Hospital:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvHospital"
-                android:text="Edgardo Rebagliati Martins"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditHospital"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Distrito -->
-        <TextView
-            android:text="Distrito:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvDistrito"
-                android:text="Lima"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditDistrito"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Nacionalidad -->
-        <TextView
-            android:text="Nacionalidad:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvNacionalidad"
-                android:text="Peruana"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditNacionalidad"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- Información adicional -->
-        <TextView
-            android:text="Información Adicional:"
-            android:textSize="18sp"
-            android:layout_marginTop="12dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:id="@+id/tvAdditionalInfo"
-                android:text="Especialista en medicina interna"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <ImageView
-                android:id="@+id/ivEditAdditionalInfo"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit" />
-        </LinearLayout>
-
-        <!-- 🔹 HORARIOS DE ATENCIÓN (EDITABLE) -->
-        <TextView
-            android:text="Horario de Atención:"
+            android:layout_gravity="center_horizontal|bottom"
+            android:text="Dr_Pe"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="#6200EE"
-            android:layout_marginTop="16dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-        <EditText
-            android:id="@+id/tvHorario"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Horario"
-            android:hint="Agregar horario"
-            android:inputType="text"
-            android:background="@android:color/transparent"
-            android:textSize="18sp"/>
+            android:textColor="#FFFFFF" />
 
-        <!-- Contenedor dinámico para horarios -->
+        <!-- Aquí se incluiría la barra de estado si fuera necesario: hora (9:41), iconos de batería, etc. -->
+    </FrameLayout>
+    <!-- NOTA: El drawable/header_top_background.xml debe definir un shape con color cian y esquinas inferiores redondeadas. -->
+
+    <!-- ============================================== -->
+    <!-- ⬇️ SCROLL VIEW (Contenido central que se desplaza) -->
+    <!-- layout_weight="1" permite que ocupe todo el espacio restante -->
+    <!-- ============================================== -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
         <LinearLayout
-            android:id="@+id/llHorariosContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="8dp" />
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="20dp">
 
-        <ImageView
-            android:id="@+id/ivAddHorario"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_access_time"
-            android:layout_marginTop="8dp"
-            android:contentDescription="Agregar horario" />
+            <!-- 🔝 ENCABEZADO CENTRAL: Flecha atrás, Título y Botón de Información -->
+            <!-- Ya no tiene padding top, ya que el espacio superior lo ocupa el Encabezado Verde -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp"
+                android:layout_marginTop="20dp">
 
-        <!-- Contraseña -->
+                <!-- ⬅️ Flecha Atrás (Back Button) -->
+                <ImageView
+                    android:id="@+id/ivBack"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_arrow_back"
+                    android:tint="#00C9AA"
+                    android:contentDescription="Volver atrás" />
+
+                <!-- 🩺 Título -->
+                <TextView
+                    android:id="@+id/tvProfileTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Perfil Profesional"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center" />
+
+                <!-- ℹ️ Info Icon (Círculo con i) -->
+                <ImageView
+                    android:id="@+id/ivInfo"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_info"
+                    android:tint="#00C9AA"
+                    android:contentDescription="Información" />
+            </LinearLayout>
+            <!-- FIN DEL ENCABEZADO CENTRAL -->
+
+
+            <!-- 👤 Foto de perfil -->
+            <FrameLayout
+                android:layout_width="140dp"
+                android:layout_height="140dp"
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:id="@+id/ivProfilePicture"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_profile"
+                    android:scaleType="centerCrop"
+                    android:background="@drawable/circle_background"
+                    android:contentDescription="Foto de perfil" />
+
+                <ImageView
+                    android:id="@+id/ivCameraIcon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="8dp"
+                    android:padding="8dp"
+                    android:background="@drawable/circle_icon_background"
+                    android:src="@drawable/ic_camera" />
+            </FrameLayout>
+
+            <!-- 🔹 Datos Personales -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Datos Personales"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#6200EE"
+                android:layout_marginTop="24dp" />
+
+            <!-- Nombre -->
+            <TextView
+                android:text="Nombre:"
+                android:textSize="18sp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvProfileName"
+                    android:text="Abdullah"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditName"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Número de Contacto -->
+            <TextView
+                android:text="Número de Contacto:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <EditText
+                    android:id="@+id/etContactNumber"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="+51 996542021"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:inputType="phone"
+                    android:background="@android:color/transparent"
+                    android:textColor="#000000"
+                    android:maxLength="15"
+                    android:enabled="true" />
+
+                <ImageView
+                    android:id="@+id/ivEditPhone"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Edad -->
+            <TextView
+                android:text="Edad:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvAge"
+                    android:text="67 años"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditAge"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Especialidad -->
+            <TextView
+                android:text="Especialidad:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvProfileSpecialty"
+                    android:text="Psiquiatría"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditDescription"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Años de experiencia -->
+            <TextView
+                android:text="Años de Experiencia:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvExperienceYears"
+                    android:text="10"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditExperience"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Universidad -->
+            <TextView
+                android:text="Universidad:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvUniversity"
+                    android:text="Universidad Nacional Mayor de San Marcos"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditUniversity"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Hospital -->
+            <TextView
+                android:text="Hospital:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvHospital"
+                    android:text="Edgardo Rebagliati Martins"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditHospital"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Distrito -->
+            <TextView
+                android:text="Distrito:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvDistrito"
+                    android:text="Lima"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditDistrito"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Nacionalidad -->
+            <TextView
+                android:text="Nacionalidad:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvNacionalidad"
+                    android:text="Peruana"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditNacionalidad"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- Información adicional -->
+            <TextView
+                android:text="Información Adicional:"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvAdditionalInfo"
+                    android:text="Especialista en medicina interna"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivEditAdditionalInfo"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit" />
+            </LinearLayout>
+
+            <!-- 🔹 HORARIOS DE ATENCIÓN (EDITABLE) -->
+            <TextView
+                android:text="Horario de Atención:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#6200EE"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <EditText
+                android:id="@+id/tvHorario"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Horario"
+                android:hint="Agregar horario"
+                android:inputType="text"
+                android:background="@android:color/transparent"
+                android:textSize="18sp"/>
+
+            <!-- Contenedor dinámico para horarios -->
+            <LinearLayout
+                android:id="@+id/llHorariosContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp" />
+
+            <ImageView
+                android:id="@+id/ivAddHorario"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_access_time"
+                android:layout_marginTop="8dp"
+                android:contentDescription="Agregar horario" />
+
+            <!-- Contraseña -->
+            <TextView
+                android:id="@+id/tvPassword"
+                android:text="Contraseña: ************"
+                android:textSize="18sp"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <Button
+                android:id="@+id/btnChangePassword"
+                android:text="🔴 Cambiar Contraseña"
+                android:textSize="16sp"
+                android:backgroundTint="#B71C1C"
+                android:textColor="#FFFFFF"
+                android:layout_marginTop="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+
+            <!-- 🔹 FECHAS DE ATENCIÓN (EDITABLE) -->
+            <TextView
+                android:text="Fechas de Atención:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#6200EE"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <EditText
+                android:id="@+id/tvFechasAtencion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Fechas"
+                android:hint="Agregar Fechas"
+                android:inputType="text"
+                android:background="@android:color/transparent"
+                android:textSize="18sp"/>
+
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupFechas"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:chipSpacing="4dp"
+                app:singleSelection="false"
+                app:singleLine="false" />
+
+            <ImageView
+                android:id="@+id/ivAddFecha"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_calendar_today"
+                android:layout_marginTop="8dp"
+                android:contentDescription="Agregar fecha" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ============================================== -->
+    <!-- ⬇️ PIE DE PÁGINA INFERIOR VERDE/CIAN (NO SCROLLABLE) -->
+    <!-- ============================================== -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="35dp"
+        android:background="@drawable/footer_bottom_background">
+
         <TextView
-            android:id="@+id/tvPassword"
-            android:text="Contraseña: ************"
-            android:textSize="18sp"
-            android:layout_marginTop="16dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <Button
-            android:id="@+id/btnChangePassword"
-            android:text="🔴 Cambiar Contraseña"
-            android:textSize="16sp"
-            android:backgroundTint="#B71C1C"
-            android:textColor="#FFFFFF"
-            android:layout_marginTop="8dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center" />
-
-        <!-- 🔹 FECHAS DE ATENCIÓN (EDITABLE) -->
-        <TextView
-            android:text="Fechas de Atención:"
-            android:textSize="18sp"
+            android:layout_gravity="center"
+            android:text="Sistema Médico"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="#6200EE"
-            android:layout_marginTop="16dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:textColor="#FFFFFF" />
+    </FrameLayout>
+    <!-- NOTA: El drawable/footer_bottom_background.xml debe definir un shape con color cian y esquinas superiores redondeadas. -->
 
-        <EditText
-            android:id="@+id/tvFechasAtencion"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Fechas"
-            android:hint="Agregar Fechas"
-            android:inputType="text"
-            android:background="@android:color/transparent"
-            android:textSize="18sp"/>
-
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupFechas"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            app:chipSpacing="4dp"
-            app:singleSelection="false"
-            app:singleLine="false" />
-
-        <ImageView
-            android:id="@+id/ivAddFecha"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_calendar_today"
-            android:layout_marginTop="8dp"
-            android:contentDescription="Agregar fecha" />
-
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>

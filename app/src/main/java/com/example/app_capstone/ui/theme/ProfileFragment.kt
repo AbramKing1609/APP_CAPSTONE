@@ -195,7 +195,10 @@ class ProfileActivity : AppCompatActivity() {
             }
         }
 
-
+// Dentro de fun onCreate(...)
+// 🔹 Referencias de íconos de Navegación/Información (NUEVO)
+        val ivBack = findViewById<ImageView>(R.id.ivBack)
+        val ivInfo = findViewById<ImageView>(R.id.ivInfo)
 
         val currentUser = auth.currentUser
         if (currentUser == null) {
@@ -296,6 +299,33 @@ class ProfileActivity : AppCompatActivity() {
                 textView = tvNacionalidad,
                 medicoFieldKey = "ID_NACIONALIDAD"
             )
+        }
+
+        // Dentro de fun onCreate(...)
+
+// -------------------------------------------------------------
+// ⬅️ Lógica para el ícono de ATRÁS
+// -------------------------------------------------------------
+        ivBack.setOnClickListener {
+            // Cierra esta actividad y regresa a la actividad anterior en la pila
+            finish()
+        }
+
+        // Dentro de fun onCreate(...)
+
+// -------------------------------------------------------------
+// ℹ️ Lógica para el ícono de INFORMACIÓN
+// -------------------------------------------------------------
+        ivInfo.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Información del Perfil Médico")
+                .setMessage(
+                    "Esta pantalla contiene toda la información de tu perfil profesional. " +
+                            "Puedes editar cualquier campo tocando el ícono de lápiz (✏️) junto a él. " +
+                            "La información de horarios y fechas de atención es vital para que los pacientes puedan agendar citas."
+                )
+                .setPositiveButton("Entendido", null)
+                .show()
         }
     }
 
