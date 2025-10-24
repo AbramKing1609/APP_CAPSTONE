@@ -2,6 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="#F5F5F5">
 
     <LinearLayout
@@ -364,7 +365,7 @@
                 android:src="@drawable/ic_edit" />
         </LinearLayout>
 
-        <!-- HORARIO DE ATENCIÓN (EDITABLE) -->
+        <!-- 🔹 HORARIOS DE ATENCIÓN (EDITABLE) -->
         <TextView
             android:text="Horario de Atención:"
             android:textSize="18sp"
@@ -373,28 +374,31 @@
             android:layout_marginTop="16dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
-
-        <LinearLayout
+        <EditText
+            android:id="@+id/tvHorario"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:text="Horario"
+            android:hint="Agregar horario"
+            android:inputType="text"
+            android:background="@android:color/transparent"
+            android:textSize="18sp"/>
 
-            <TextView
-                android:id="@+id/tvHorario"
-                android:text="🕒 10:00pm - 11:00pm"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
+        <!-- Contenedor dinámico para horarios -->
+        <LinearLayout
+            android:id="@+id/llHorariosContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp" />
 
-            <ImageView
-                android:id="@+id/ivEditHorario"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_access_time" />
-        </LinearLayout>
+        <ImageView
+            android:id="@+id/ivAddHorario"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_access_time"
+            android:layout_marginTop="8dp"
+            android:contentDescription="Agregar horario" />
 
         <!-- Contraseña -->
         <TextView
@@ -416,7 +420,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center" />
 
-        <!-- FECHAS DE ATENCIÓN (EDITABLE) -->
+        <!-- 🔹 FECHAS DE ATENCIÓN (EDITABLE) -->
         <TextView
             android:text="Fechas de Atención:"
             android:textSize="18sp"
@@ -426,27 +430,33 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
-        <LinearLayout
+        <EditText
+            android:id="@+id/tvFechasAtencion"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:text="Fechas"
+            android:hint="Agregar Fechas"
+            android:inputType="text"
+            android:background="@android:color/transparent"
+            android:textSize="18sp"/>
 
-            <TextView
-                android:id="@+id/tvFechasAtencion"
-                android:text="📅 Lunes Miércoles Viernes"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
 
-            <ImageView
-                android:id="@+id/ivEditFechasAtencion"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_calendar_today" />
-        </LinearLayout>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupFechas"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:chipSpacing="4dp"
+            app:singleSelection="false"
+            app:singleLine="false" />
+
+        <ImageView
+            android:id="@+id/ivAddFecha"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_calendar_today"
+            android:layout_marginTop="8dp"
+            android:contentDescription="Agregar fecha" />
 
     </LinearLayout>
 </ScrollView>

@@ -25,13 +25,16 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import android.app.Activity
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import java.util.Calendar // ⬅️ NUEVO: Para obtener la hora/fecha actual
 import com.google.android.material.datepicker.MaterialDatePicker
 import java.text.SimpleDateFormat
 import java.util.*
 
 class ProfileActivity : AppCompatActivity() {
-
+    private lateinit var llHorariosContainer: LinearLayout
+    private lateinit var chipGroupFechas: ChipGroup
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
@@ -39,6 +42,8 @@ class ProfileActivity : AppCompatActivity() {
     private val PICK_IMAGE_REQUEST = 100
     private val PERMISSION_REQUEST_CODE = 200
     private lateinit var ivProfilePicture: ImageView
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,8 +64,8 @@ class ProfileActivity : AppCompatActivity() {
         val tvNacionalidad = findViewById<TextView>(R.id.tvNacionalidad)
 
         // 🔹 CAMPOS DE HORARIO/FECHAS
-        val tvHorario = findViewById<TextView>(R.id.tvHorario)
-        val tvFechasAtencion = findViewById<TextView>(R.id.tvFechasAtencion)
+        llHorariosContainer = findViewById<LinearLayout>(R.id.llHorariosContainer)
+        chipGroupFechas = findViewById<ChipGroup>(R.id.chipGroupFechas)
 
 
         // 🔹 Iconos de edición
@@ -78,9 +83,8 @@ class ProfileActivity : AppCompatActivity() {
         val ivEditNacionalidad = findViewById<ImageView>(R.id.ivEditNacionalidad)
 
         // 🔹 ICONOS DE HORARIO/FECHAS
-        val ivEditHorario = findViewById<ImageView>(R.id.ivEditHorario)
-        val ivEditFechasAtencion = findViewById<ImageView>(R.id.ivEditFechasAtencion)
-
+        val ivAddHorario = findViewById<ImageView>(R.id.ivAddHorario)
+        val ivAddFecha = findViewById<ImageView>(R.id.ivAddFecha)
 
         // 🔹 Referencia a la imagen de perfil
         ivProfilePicture = findViewById<ImageView>(R.id.ivProfilePicture)
@@ -128,15 +132,14 @@ class ProfileActivity : AppCompatActivity() {
         // -------------------------------------------------------------
         // ⏰ NUEVO: Listener para el selector de RANGO DE HORA
         // -------------------------------------------------------------
-        ivEditHorario.setOnClickListener {
-            showTimeRangePickerDialog(tvHorario)
+        ivAddHorario.setOnClickListener {
+            showTimeRangePickerDialog(llHorariosContainer) // Cambia el TextView por LinearLayout
         }
 
-        // 📅 NUEVO: Listener para el selector de DÍAS DE ATENCIÓN
-        // -------------------------------------------------------------
-        ivEditFechasAtencion.setOnClickListener {
-            showCalendarPicker(tvFechasAtencion)
+        ivAddFecha.setOnClickListener {
+            showCalendarPicker(chipGroupFechas) // Cambia el TextView por ChipGroup
         }
+
 
         // -------------------------------------------------------------
         // 🔹 Funciones autoincrementales (sin cambios)
@@ -202,59 +205,83 @@ class ProfileActivity : AppCompatActivity() {
      * Muestra dos TimePickerDialogs secuenciales para seleccionar el rango de hora de atención (INICIO y FIN).
      * Actualiza el campo HORARIO_ATENCION en Firestore.
      */
-    private fun showTimeRangePickerDialog(textView: TextView) {
+
+    private fun showTimeRangePickerDialog(container: LinearLayout) {
         val userId = auth.currentUser?.uid ?: return
-
-        fun addTimeRange() {
-            val calendar = Calendar.getInstance()
-            val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
-            val currentMinute = calendar.get(Calendar.MINUTE)
-
-            val startTimePicker = TimePickerDialog(
-                this,
-                { _, startHour, startMinute ->
-                    val endTimePicker = TimePickerDialog(
-                        this,
-                        { _, endHour, endMinute ->
-                            if (endHour * 60 + endMinute <= startHour * 60 + startMinute) {
-                                Toast.makeText(this, "La hora de fin debe ser posterior a la de inicio.", Toast.LENGTH_LONG).show()
-                                return@TimePickerDialog
-                            }
-
-                            val rangeStr = String.format("%02d:%02d - %02d:%02d", startHour, startMinute, endHour, endMinute)
-
-                            // Leer horarios existentes de Firestore
-                            db.collection("medicos").document(userId).get()
-                                .addOnSuccessListener { doc ->
-                                    val existingRanges = doc.get("HORARIO_ATENCION") as? MutableList<String> ?: mutableListOf()
-                                    existingRanges.add(rangeStr)
-
-                                    db.collection("medicos").document(userId)
-                                        .update("HORARIO_ATENCION", existingRanges)
-                                        .addOnSuccessListener {
-                                            textView.text = existingRanges.joinToString(" | ") { "🕒 $it" }
-                                            Toast.makeText(this, "Horario agregado", Toast.LENGTH_SHORT).show()
+        val calendar = Calendar.getInstance()
+        val startPicker = TimePickerDialog(this, { _, startHour, startMinute ->
+            val endPicker = TimePickerDialog(this, { _, endHour, endMinute ->
+                if (endHour*60 + endMinute <= startHour*60 + startMinute) {
+                    Toast.makeText(this, "La hora de fin debe ser posterior a la de inicio.", Toast.LENGTH_LONG).show()
+                    return@TimePickerDialog
+                }
+                val rangeStr = String.format("%02d:%02d - %02d:%02d", startHour, startMinute, endHour, endMinute)
+                db.collection("medicos").document(userId).get()
+                    .addOnSuccessListener { doc ->
+                        val existingRanges = doc.get("HORARIO_ATENCION") as? MutableList<String> ?: mutableListOf()
+                        existingRanges.add(rangeStr)
+                        db.collection("medicos").document(userId).update("HORARIO_ATENCION", existingRanges)
+                            .addOnSuccessListener {
+                                val tv = TextView(this)
+                                tv.text = rangeStr
+                                tv.setPadding(16,16,16,16)
+                                tv.setBackgroundResource(R.drawable.bg_chip_style) // opcional, para que parezca un botón
+                                tv.setOnClickListener {
+                                    AlertDialog.Builder(this)
+                                        .setTitle("Editar o eliminar horario")
+                                        .setMessage("¿Deseas editar o eliminar este horario?")
+                                        .setPositiveButton("Editar") { _, _ ->
+                                            editHorario(rangeStr, tv, container) // ✅ usar 'container', no 'llHorariosContainer'
                                         }
+                                        .setNegativeButton("Eliminar") { _, _ ->
+                                            val updatedList = existingRanges.toMutableList()
+                                            updatedList.remove(rangeStr)
+                                            db.collection("medicos").document(userId)
+                                                .update("HORARIO_ATENCION", updatedList)
+                                            container.removeView(tv)
+                                        }
+                                        .show()
                                 }
-                        },
-                        startHour + 1,
-                        startMinute,
-                        true
-                    )
-                    endTimePicker.setTitle("Seleccionar hora de FIN")
-                    endTimePicker.show()
-                },
-                currentHour,
-                currentMinute,
-                true
-            )
-            startTimePicker.setTitle("Seleccionar hora de INICIO")
-            startTimePicker.show()
-        }
 
-        addTimeRange()
+                                container.addView(tv)
+
+                            }
+                    }
+            }, startHour+1, startMinute, true)
+            endPicker.setTitle("Seleccionar hora de FIN")
+            endPicker.show()
+        }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true)
+        startPicker.setTitle("Seleccionar hora de INICIO")
+        startPicker.show()
     }
 
+    private fun editHorario(oldRange: String, textView: TextView, container: LinearLayout) {
+        val userId = auth.currentUser?.uid ?: return
+        val calendar = Calendar.getInstance()
+
+        val times = oldRange.split(" - ")
+        val startParts = times[0].split(":")
+        val endParts = times[1].split(":")
+
+        val startPicker = TimePickerDialog(this, { _, startHour, startMinute ->
+            val endPicker = TimePickerDialog(this, { _, endHour, endMinute ->
+                val newRange = String.format("%02d:%02d - %02d:%02d", startHour, startMinute, endHour, endMinute)
+                db.collection("medicos").document(userId).get()
+                    .addOnSuccessListener { doc ->
+                        val list = doc.get("HORARIO_ATENCION") as? MutableList<String> ?: mutableListOf()
+                        val idx = list.indexOf(oldRange)
+                        if (idx >= 0) list[idx] = newRange
+                        db.collection("medicos").document(userId)
+                            .update("HORARIO_ATENCION", list)
+                        textView.text = newRange
+                    }
+            }, endParts[0].toInt(), endParts[1].toInt(), true)
+            endPicker.setTitle("Hora de fin")
+            endPicker.show()
+        }, startParts[0].toInt(), startParts[1].toInt(), true)
+        startPicker.setTitle("Hora de inicio")
+        startPicker.show()
+    }
 
     /**
      * Muestra un AlertDialog con checkboxes para seleccionar los días de atención.
@@ -378,17 +405,61 @@ class ProfileActivity : AppCompatActivity() {
                     val tvFechas = findViewById<TextView>(R.id.tvFechasAtencion)
 
 // Concatenar horarios con separador " | "
-                    val displayHorarios = if (horarioList.isNotEmpty() && horarioList[0] != "N/A") {
-                        horarioList.joinToString(" | ") { "🕒 $it" }
-                    } else "🕒 N/A - N/A"
+                    llHorariosContainer.removeAllViews()
+                    if (horarioList.isNotEmpty() && horarioList[0] != "N/A") {
+                        horarioList.forEach { rangeStr ->
+                            val tv = TextView(this)
+                            tv.text = rangeStr
+                            tv.setPadding(16,16,16,16)
+                            tv.setBackgroundResource(R.drawable.bg_chip_style)
+                            tv.setOnClickListener {
+                                AlertDialog.Builder(this)
+                                    .setTitle("Editar o eliminar horario")
+                                    .setMessage("¿Deseas editar o eliminar este horario?")
+                                    .setPositiveButton("Editar") { _, _ ->
+                                        editHorario(rangeStr, tv, llHorariosContainer)
+                                    }
+                                    .setNegativeButton("Eliminar") { _, _ ->
+                                        val updatedList = horarioList.toMutableList()
+                                        updatedList.remove(rangeStr)
+                                        db.collection("medicos").document(userId)
+                                            .update("HORARIO_ATENCION", updatedList)
+                                        llHorariosContainer.removeView(tv)
+                                    }
+                                    .show()
+                            }
+                            llHorariosContainer.addView(tv)
+                        }
+                    }
 
-// Concatenar fechas con separador " " (espacio ancho)
-                    val displayFechas = if (diasList.isNotEmpty() && diasList[0] != "N/A") {
-                        diasList.joinToString(" ") { "📅 $it" }
-                    } else "📅 N/A"
 
-                    tvHorario.text = displayHorarios
-                    tvFechas.text = displayFechas
+                    chipGroupFechas.removeAllViews()
+                    if (diasList.isNotEmpty() && diasList[0] != "N/A") {
+                        diasList.forEach { dateStr ->
+                            val chip = Chip(this)
+                            chip.text = dateStr
+                            chip.isCloseIconVisible = true
+                            chip.setOnClickListener {
+                                AlertDialog.Builder(this)
+                                    .setTitle("Editar o eliminar fecha")
+                                    .setMessage("¿Deseas eliminar esta fecha?")
+                                    .setPositiveButton("Eliminar") { _, _ ->
+                                        val updatedDates = mutableListOf<String>()
+                                        for (i in 0 until chipGroupFechas.childCount) {
+                                            val c = chipGroupFechas.getChildAt(i) as Chip
+                                            if (c != chip) updatedDates.add(c.text.toString())
+                                        }
+                                        db.collection("medicos").document(userId)
+                                            .update("DIAS_ATENCION", updatedDates)
+                                        chipGroupFechas.removeView(chip)
+
+                                    }
+                                    .show()
+                            }
+                            chipGroupFechas.addView(chip)
+                        }
+                    }
+
 
 
                 }
@@ -705,50 +776,77 @@ class ProfileActivity : AppCompatActivity() {
             }
     }
 
-    private fun showCalendarPicker(textView: TextView) {
+    private fun showCalendarPicker(chipGroup: ChipGroup) {
         val userId = auth.currentUser?.uid ?: return
-
-        val builder = MaterialDatePicker.Builder.dateRangePicker()
-        builder.setTitleText("Seleccionar fechas de atención")
+        val builder = MaterialDatePicker.Builder.dateRangePicker().setTitleText("Seleccionar fechas de atención")
         val picker = builder.build()
-
         picker.show(supportFragmentManager, picker.toString())
-
         picker.addOnPositiveButtonClickListener { selection ->
             val startDate = selection.first
             val endDate = selection.second
-
             val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
             val datesList = mutableListOf<String>()
-            val calendar = Calendar.getInstance()
-            calendar.timeInMillis = startDate
-            calendar.set(Calendar.HOUR_OF_DAY, 12) // 🔹 Evita desfase por zona horaria
-            val endCal = Calendar.getInstance()
-            endCal.timeInMillis = endDate
-            endCal.set(Calendar.HOUR_OF_DAY, 12)
-
-            while (!calendar.after(endCal)) {  // 🔹 Mejor usar !after para incluir el último día
-                datesList.add(sdf.format(calendar.time))
-                calendar.add(Calendar.DAY_OF_MONTH, 1)
-            }
-
-            // Obtener fechas existentes y agregar nuevo rango
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = startDate
+            val endCal = Calendar.getInstance(); endCal.timeInMillis = endDate
+            while (!cal.after(endCal)) { datesList.add(sdf.format(cal.time)); cal.add(Calendar.DAY_OF_MONTH,1) }
             db.collection("medicos").document(userId).get()
                 .addOnSuccessListener { doc ->
                     val existingDates = doc.get("DIAS_ATENCION") as? MutableList<String> ?: mutableListOf()
                     existingDates.addAll(datesList)
-                    existingDates.sort() // opcional, para ordenar fechas
-
-                    db.collection("medicos").document(userId)
-                        .update("DIAS_ATENCION", existingDates)
+                    existingDates.sort()
+                    db.collection("medicos").document(userId).update("DIAS_ATENCION", existingDates)
                         .addOnSuccessListener {
-                            textView.text = existingDates.joinToString(" ") { "📅 $it" }
-                            Toast.makeText(this, "Fechas agregadas correctamente", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener {
-                            Toast.makeText(this, "Error al actualizar fechas", Toast.LENGTH_SHORT).show()
+                            datesList.forEach { dateStr ->
+                                val chip = Chip(this)
+                                chip.text = dateStr
+                                chip.isCloseIconVisible = true
+                                chip.setOnClickListener {
+                                    val clickedChip = it as Chip  // 🔹 Creamos la referencia al chip clickeado
+                                    AlertDialog.Builder(this)
+                                        .setTitle("Editar o eliminar fecha")
+                                        .setMessage("¿Deseas eliminar esta fecha?")
+                                        .setPositiveButton("Eliminar") { _, _ ->
+                                            val updatedDates = mutableListOf<String>()
+                                            for (i in 0 until chipGroup.childCount) {
+                                                val c = chipGroup.getChildAt(i) as Chip
+                                                if (c != clickedChip) {  // ✔️ Ahora usamos la variable correcta
+                                                    updatedDates.add(c.text.toString())
+                                                }
+                                            }
+                                            db.collection("medicos").document(userId)
+                                                .update("DIAS_ATENCION", updatedDates)
+                                            chipGroup.removeView(clickedChip)
+                                        }
+                                        .show()
+                                }
+                                chipGroup.addView(chip)
+
+                            }
                         }
                 }
         }
+    }
+
+
+    private fun displayHorarioYFechas(tvHorario: TextView, tvFechas: TextView) {
+        val userId = auth.currentUser?.uid ?: return
+
+        db.collection("medicos").document(userId).get()
+            .addOnSuccessListener { doc ->
+                val horarioList = doc.get("HORARIO_ATENCION") as? List<String> ?: listOf("N/A")
+                val diasList = doc.get("DIAS_ATENCION") as? List<String> ?: listOf("N/A")
+
+                val displayHorarios = if (horarioList.isNotEmpty() && horarioList[0] != "N/A") {
+                    horarioList.joinToString(" | ") { "🕒 $it" }
+                } else "🕒 N/A - N/A"
+
+                val displayFechas = if (diasList.isNotEmpty() && diasList[0] != "N/A") {
+                    diasList.joinToString(" ") { "📅 $it" }
+                } else "📅 N/A"
+
+                tvHorario.text = displayHorarios
+                tvFechas.text = displayFechas
+            }
     }
 }
