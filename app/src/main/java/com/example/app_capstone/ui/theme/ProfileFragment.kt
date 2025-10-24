@@ -301,8 +301,6 @@ class ProfileActivity : AppCompatActivity() {
             )
         }
 
-        // Dentro de fun onCreate(...)
-
 // -------------------------------------------------------------
 // ⬅️ Lógica para el ícono de ATRÁS
 // -------------------------------------------------------------
@@ -310,8 +308,6 @@ class ProfileActivity : AppCompatActivity() {
             // Cierra esta actividad y regresa a la actividad anterior en la pila
             finish()
         }
-
-        // Dentro de fun onCreate(...)
 
 // -------------------------------------------------------------
 // ℹ️ Lógica para el ícono de INFORMACIÓN
