@@ -1,97 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:orientation="vertical"
+    android:background="#F5F5F5">
 
-    <!-- Header con Bandera/Iconos - REDISEÑO BASADO EN LA IMAGEN -->
-    <RelativeLayout
-        android:id="@+id/header"
+    <!-- ============================================== -->
+    <!-- 1. ENCABEZADO SUPERIOR VERDE/CIAN (FIJO) -->
+    <!-- ============================================== -->
+    <FrameLayout
+        android:id="@+id/fixedTopHeader"
         android:layout_width="match_parent"
-        android:layout_height="220dp"
-        android:background="@android:color/transparent">
+        android:layout_height="40dp"
+        android:background="@drawable/header_top_background"
+        android:paddingTop="10dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
 
-        <!-- Contenedor central para el texto de bienvenida y los iconos de doctor/usuario -->
-        <LinearLayout
-            android:id="@+id/center_content"
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:orientation="vertical"
-            android:paddingTop="16dp"
-            android:paddingBottom="16dp">
+            android:layout_gravity="center_horizontal|bottom"
+            android:text="Dr_Pe"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF" />
+    </FrameLayout>
 
-            <!-- Fila Superior: Perfil, ¡Bienvenido!, Ajustes/Megáfono -->
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:layout_marginBottom="8dp">
-
-                <!-- Ícono de Perfil (izquierda) -->
-                <ImageButton
-                    android:id="@+id/btnProfile"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true"
-                    android:background="@android:color/transparent"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_profile"/>
-
-                <!-- Ícono de Ajustes/Megáfono (derecha) - Se asume que el ícono de la imagen es 'Megaphone' o un ícono relacionado (placeholder) -->
-                <ImageButton
-                    android:id="@+id/btnSettings"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:background="@android:color/transparent"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_settings"/>
-
-                <!-- Texto de Bienvenida (Centro) -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerInParent="true"
-                    android:text="¡Bienvenido!"
-                    android:textColor="@color/black"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:fontFamily="@font/montserrat_bold" />
-
-            </RelativeLayout>
-
-            <!-- Ícono Central de Doctor/a (Reemplaza la bandera de Perú) -->
-            <ImageView
-                android:id="@+id/imgCentralIcon"
-                android:layout_width="85dp"
-                android:layout_height="85dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="4dp"
-                android:contentDescription="Icono Central de Doctor/a"
-                android:src="@drawable/ic_register_app"
-                android:scaleType="fitCenter" />
-
-        </LinearLayout>
-
-    </RelativeLayout>
-
-    <!-- Contenedor para el contenido de la pantalla -->
+    <!-- ============================================== -->
+    <!-- 2. CONTENIDO PRINCIPAL DINÁMICO (CONTENEDOR) -->
+    <!-- Se cambió el ScrollView por un FrameLayout para albergar el contenido variable (home/settings). -->
+    <!-- Esto soluciona el error "Unresolved reference: main_content_frame". -->
+    <!-- ============================================== -->
     <FrameLayout
         android:id="@+id/main_content_frame"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_above="@+id/bottomNav"
-        android:layout_below="@id/header" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#F5F5F5">
 
-    <!-- Barra de navegación inferior -->
+        <!-- NOTA: El contenido de content_home debe ser cargado aquí por la Activity
+             utilizando LayoutInflater, ya que se eliminó el contenido estático anterior. -->
+
+        <!-- Para que el contenido de inicio se muestre automáticamente al cargar,
+             necesitarás el layout content_home.xml.
+             Ya que tu código de Kotlin llama a displayContent(R.layout.content_home)
+             en checkCurrentUserAndShowHome(), el contenido se cargará correctamente. -->
+
+    </FrameLayout>
+
+    <!-- ============================================== -->
+    <!-- 3. BARRA DE NAVEGACIÓN INFERIOR (FIJA) -->
+    <!-- ============================================== -->
     <LinearLayout
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
         android:background="@android:color/darker_gray"
         android:orientation="horizontal"
         android:paddingVertical="8dp">
@@ -108,11 +73,13 @@
             android:gravity="center"
             android:orientation="vertical">
 
+            <!-- Placeholder para ic_home -->
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_home"
-                android:tint="@android:color/white" />
+                app:tint="@android:color/white"
+                android:contentDescription="Inicio" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -135,11 +102,13 @@
             android:gravity="center"
             android:orientation="vertical">
 
+            <!-- Placeholder para ic_payments -->
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_payments"
-                android:tint="@android:color/white" />
+                app:tint="@android:color/white"
+                android:contentDescription="Pagos" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -162,11 +131,13 @@
             android:gravity="center"
             android:orientation="vertical">
 
+            <!-- Placeholder para ic_notifications -->
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_notifications"
-                android:tint="@android:color/white" />
+                app:tint="@android:color/white"
+                android:contentDescription="Notificaciones" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -189,11 +160,13 @@
             android:gravity="center"
             android:orientation="vertical">
 
+            <!-- Placeholder para ic_patients -->
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_patients"
-                android:tint="@android:color/white" />
+                app:tint="@android:color/white"
+                android:contentDescription="Pacientes" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -204,4 +177,23 @@
                 android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
-</RelativeLayout>
+
+    <!-- ============================================== -->
+    <!-- 4. PIE DE PÁGINA INFERIOR VERDE/CIAN (FIJO) -->
+    <!-- ============================================== -->
+    <FrameLayout
+        android:id="@+id/fixedBottomFooter"
+        android:layout_width="match_parent"
+        android:layout_height="35dp"
+        android:background="@drawable/footer_bottom_background">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Sistema Médico"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF" />
+    </FrameLayout>
+</LinearLayout>

@@ -8,7 +8,79 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
+        <!-- Header con Bandera/Iconos - REDISEÑO BASADO EN LA IMAGEN -->
+        <RelativeLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:background="@android:color/transparent">
 
+            <!-- Contenedor central para el texto de bienvenida y los iconos de doctor/usuario -->
+            <LinearLayout
+                android:id="@+id/center_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:orientation="vertical"
+                android:paddingTop="16dp"
+                android:paddingBottom="16dp">
+
+                <!-- Fila Superior: Perfil, ¡Bienvenido!, Ajustes/Megáfono -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:layout_marginBottom="8dp">
+
+                    <!-- Ícono de Perfil (izquierda) -->
+                    <ImageButton
+                        android:id="@+id/btnProfile"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:background="@android:color/transparent"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_profile"/>
+
+                    <!-- Ícono de Ajustes/Megáfono (derecha) - Se asume que el ícono de la imagen es 'Megaphone' o un ícono relacionado (placeholder) -->
+                    <ImageButton
+                        android:id="@+id/btnSettings"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="@android:color/transparent"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_settings"/>
+
+                    <!-- Texto de Bienvenida (Centro) -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="¡Bienvenido!"
+                        android:textColor="@color/black"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/montserrat_bold" />
+
+                </RelativeLayout>
+
+                <!-- Ícono Central de Doctor/a (Reemplaza la bandera de Perú) -->
+                <ImageView
+                    android:id="@+id/imgCentralIcon"
+                    android:layout_width="85dp"
+                    android:layout_height="85dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="4dp"
+                    android:contentDescription="Icono Central de Doctor/a"
+                    android:src="@drawable/ic_register_app"
+                    android:scaleType="fitCenter" />
+
+            </LinearLayout>
+
+        </RelativeLayout>
         <!-- Sección de Bienvenida -->
         <TextView
             android:id="@+id/tvWelcome"

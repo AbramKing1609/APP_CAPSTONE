@@ -15,13 +15,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.QuerySnapshot
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,8 +25,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnPatients: LinearLayout
     private lateinit var btnHome: LinearLayout
     private lateinit var btnPagos: LinearLayout
-    private lateinit var btnProfile: ImageButton
-    private lateinit var btnSettings: ImageButton
     private lateinit var mainContentFrame: FrameLayout
 
     private val auth = FirebaseAuth.getInstance()
@@ -50,8 +44,6 @@ class MainActivity : AppCompatActivity() {
         btnPatients = findViewById(R.id.btnPatients)
         btnHome = findViewById(R.id.btnHome)
         btnPagos = findViewById(R.id.btnPagos)
-        btnProfile = findViewById(R.id.btnProfile)
-        btnSettings = findViewById(R.id.btnSettings)
         mainContentFrame = findViewById(R.id.main_content_frame)
     }
 
@@ -61,7 +53,7 @@ class MainActivity : AppCompatActivity() {
 
         btnHome.setOnClickListener {
             selectButton(btnHome)
-            displayContent(R.layout.content_home)
+            loadHomeContent()
         }
 
         btnPagos.setOnClickListener {
@@ -80,16 +72,6 @@ class MainActivity : AppCompatActivity() {
             selectButton(btnPatients)
             val intent = Intent(this, PatientsActivity::class.java)
             startActivity(intent)
-        }
-
-        btnProfile.setOnClickListener {
-            val intent = Intent(this, ProfileActivity::class.java)
-            startActivity(intent)
-        }
-
-
-        btnSettings.setOnClickListener {
-            displayContent(R.layout.content_settings)
         }
     }
 
@@ -119,30 +101,44 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Recuperar datos de Firestore
+        // Recuperar datos de Firestore y mostrar el contenido de home
+        loadHomeContent()
+    }
+
+    /**
+     * Carga el contenido de home (content_home.xml) en el FrameLayout, recuperando los datos del usuario de Firestore.
+     * Esto asegura que siempre se cargue con el nombre del doctor actualizado.
+     */
+    private fun loadHomeContent() {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            goToLogin()
+            return
+        }
+
         val userId = currentUser.uid
         db.collection("medicos").document(userId).get()
             .addOnSuccessListener { document ->
-                if (document.exists()) {
-                    val name = document.getString("NOMBRE") ?: "Doctor"
-                    val lastName = document.getString("APELLIDO") ?: ""
+                val name = document.getString("NOMBRE") ?: "Doctor"
+                val lastName = document.getString("APELLIDO") ?: ""
 
-                    // Mostrar contenido de inicio con los datos del usuario
-                    displayContent(R.layout.content_home, name, lastName)
-                } else {
-                    displayContent(R.layout.content_home, "Doctor", "")
-                }
+                // Mostrar el contenido de home con los datos
+                displayContent(R.layout.content_home, name, lastName)
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Error al cargar datos del médico.", Toast.LENGTH_SHORT).show()
+                // Mostrar con valores por defecto en caso de error
                 displayContent(R.layout.content_home, "Doctor", "")
             }
     }
 
     /**
-     * Muestra el contenido del layout especificado en el FrameLayout principal y actualiza los datos.
+     * Muestra el contenido del layout especificado en el FrameLayout principal.
+     * @param layoutId El ID del layout a inflar.
+     * @param name Nombre del doctor (solo para home).
+     * @param lastName Apellido del doctor (solo para home).
      */
-    private fun displayContent(layoutId: Int) {
+    private fun displayContent(layoutId: Int, name: String = "", lastName: String = "") {
         // Limpia cualquier vista anterior en el contenedor
         mainContentFrame.removeAllViews()
 
@@ -152,25 +148,28 @@ class MainActivity : AppCompatActivity() {
 
         when (layoutId) {
             R.layout.content_home -> {
-                val currentUser = auth.currentUser
-                if (currentUser != null) {
-                    db.collection("medicos").document(currentUser.uid).get()
-                        .addOnSuccessListener { document ->
-                            if (document.exists()) {
-                                val name = document.getString("NOMBRE") ?: "Doctor"
-                                val lastName = document.getString("APELLIDO") ?: ""
-                                val tvWelcome = newLayout.findViewById<TextView>(R.id.tvWelcome)
-                                val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
-                                val btnLogout = newLayout.findViewById<Button>(R.id.btnLogout)
+                // Configurar las vistas específicas de home
+                val tvWelcome = newLayout.findViewById<TextView>(R.id.tvWelcome)
+                val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
+                val btnLogout = newLayout.findViewById<Button>(R.id.btnLogout)
+                val btnProfile = newLayout.findViewById<ImageButton>(R.id.btnProfile)
+                val btnSettings = newLayout.findViewById<ImageButton>(R.id.btnSettings)
 
-                                tvWelcome?.text = "Hola Doctor/a,"
-                                tvDoctorName?.text = "$name $lastName"
+                tvWelcome?.text = "Hola Doctor/a,"
+                tvDoctorName?.text = "$name $lastName"
 
-                                btnLogout?.setOnClickListener {
-                                    showLogoutDialog()
-                                }
-                            }
-                        }
+                btnLogout?.setOnClickListener {
+                    showLogoutDialog()
+                }
+
+                // Configurar listeners para btnProfile y btnSettings (solo disponibles en content_home)
+                btnProfile?.setOnClickListener {
+                    val intent = Intent(this, ProfileActivity::class.java)
+                    startActivity(intent)
+                }
+
+                btnSettings?.setOnClickListener {
+                    displayContent(R.layout.content_settings)
                 }
             }
 
@@ -253,7 +252,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Actualizar el documento en la colección 'medicos'
                 // La conversión a Map<String, Any> es segura aquí porque Firestore ignora los valores null en un update.
-                db.collection("medicos").document(userId).update(updatedData as Map<String, Any>)
+                db.collection("medicos").document(userId).update(updatedData.filterValues { it != null } as Map<String, Any>)
                     .addOnSuccessListener {
                         Toast.makeText(this, "Perfil actualizado correctamente.", Toast.LENGTH_SHORT).show()
                         dialog.dismiss()
@@ -265,27 +264,6 @@ class MainActivity : AppCompatActivity() {
                     }
             } else {
                 Toast.makeText(this, "Usuario no autenticado.", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-
-    // He mantenido la sobrecarga del método displayContent para la pantalla de inicio
-    private fun displayContent(layoutId: Int, name: String = "", lastName: String = "") {
-        mainContentFrame.removeAllViews()
-        val newLayout = LayoutInflater.from(this).inflate(layoutId, mainContentFrame, false)
-        mainContentFrame.addView(newLayout)
-
-        if (layoutId == R.layout.content_home) {
-            val tvWelcome = newLayout.findViewById<TextView>(R.id.tvWelcome)
-            val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
-            val btnLogout = newLayout.findViewById<Button>(R.id.btnLogout)
-
-            tvWelcome?.text = "Hola Doctor/a,"
-            tvDoctorName?.text = "$name $lastName"
-
-            btnLogout?.setOnClickListener {
-                showLogoutDialog()
             }
         }
     }
