@@ -218,6 +218,5 @@
             android:text="CERRAR SESIÓN"
             android:backgroundTint="#1EC8A3"
             android:textColor="@android:color/white" />
-
     </LinearLayout>
 </ScrollView>

@@ -25,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnPatients: LinearLayout
     private lateinit var btnHome: LinearLayout
     private lateinit var btnPagos: LinearLayout
+    private lateinit var btnLogout: LinearLayout
     private lateinit var mainContentFrame: FrameLayout
 
     private val auth = FirebaseAuth.getInstance()
@@ -36,6 +37,7 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
         setupNavigation()
+        setupLogoutButton()
         checkCurrentUserAndShowHome()
     }
 
@@ -44,7 +46,14 @@ class MainActivity : AppCompatActivity() {
         btnPatients = findViewById(R.id.btnPatients)
         btnHome = findViewById(R.id.btnHome)
         btnPagos = findViewById(R.id.btnPagos)
+        btnLogout = findViewById(R.id.btnLogout)
         mainContentFrame = findViewById(R.id.main_content_frame)
+    }
+
+    private fun setupLogoutButton() {
+        btnLogout.setOnClickListener {
+            showLogoutDialog()
+        }
     }
 
     private fun setupNavigation() {
@@ -64,14 +73,14 @@ class MainActivity : AppCompatActivity() {
 
         btnNotifications.setOnClickListener {
             selectButton(btnNotifications)
-            val intent = Intent(this, NotificationsActivity::class.java)
-            startActivity(intent)
+            // 🔹 Cargar contenido dinámico de notificaciones
+            displayContent(R.layout.content_notifications)
         }
 
         btnPatients.setOnClickListener {
             selectButton(btnPatients)
-            val intent = Intent(this, PatientsActivity::class.java)
-            startActivity(intent)
+            // 🔹 Cargar contenido dinámico de notificaciones
+            displayContent(R.layout.content_patients)
         }
     }
 
@@ -151,16 +160,11 @@ class MainActivity : AppCompatActivity() {
                 // Configurar las vistas específicas de home
                 val tvWelcome = newLayout.findViewById<TextView>(R.id.tvWelcome)
                 val tvDoctorName = newLayout.findViewById<TextView>(R.id.tvDoctorName)
-                val btnLogout = newLayout.findViewById<Button>(R.id.btnLogout)
                 val btnProfile = newLayout.findViewById<ImageButton>(R.id.btnProfile)
                 val btnSettings = newLayout.findViewById<ImageButton>(R.id.btnSettings)
 
                 tvWelcome?.text = "Hola Doctor/a,"
                 tvDoctorName?.text = "$name $lastName"
-
-                btnLogout?.setOnClickListener {
-                    showLogoutDialog()
-                }
 
                 // Configurar listeners para btnProfile y btnSettings (solo disponibles en content_home)
                 btnProfile?.setOnClickListener {
@@ -185,6 +189,27 @@ class MainActivity : AppCompatActivity() {
                     showAboutDialog()
                 }
             }
+            R.layout.content_notifications -> {
+                val container = newLayout.findViewById<LinearLayout>(R.id.containerNotifications)
+
+                val notifications = listOf(
+                    "Brayan Calderon Quevedo",
+                    "Maria Gomez Aguilar",
+                    "Ricardo Moran Hurtado",
+                    "Carlos Alcantara Aguila",
+                    "Jely Reategui Chongo",
+                    "Mario Antizana Dumas"
+                )
+
+                for (name in notifications) {
+                    val itemView = LayoutInflater.from(this)
+                        .inflate(R.layout.item_notification, container, false)
+                    itemView.findViewById<TextView>(R.id.tvNotificationName).text = name
+                    container.addView(itemView)
+                }
+            }
+
+
         }
     }
 

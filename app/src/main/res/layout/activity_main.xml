@@ -57,7 +57,7 @@
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/darker_gray"
+        android:background="#1EC8A3"
         android:orientation="horizontal"
         android:paddingVertical="8dp">
 
@@ -90,34 +90,6 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Botón de Pagos -->
-        <LinearLayout
-            android:id="@+id/btnPagos"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <!-- Placeholder para ic_payments -->
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_payments"
-                app:tint="@android:color/white"
-                android:contentDescription="Pagos" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Pagos"
-                android:textColor="@android:color/white"
-                android:textSize="12sp" />
-        </LinearLayout>
 
         <!-- Botón de Notificaciones -->
         <LinearLayout
@@ -176,7 +148,64 @@
                 android:textColor="@android:color/white"
                 android:textSize="12sp" />
         </LinearLayout>
+
+        <!-- Botón de Pagos -->
+        <LinearLayout
+            android:id="@+id/btnPagos"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <!-- Placeholder para ic_payments -->
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_payments"
+                app:tint="@android:color/white"
+                android:contentDescription="Pagos" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Pagos"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+        <!-- 🔹 Nuevo botón de Cerrar Sesión dentro del nav -->
+        <LinearLayout
+            android:id="@+id/btnLogout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_logout"
+                app:tint="@android:color/white"
+                android:contentDescription="Cerrar Sesión" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Salir"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
+
 
     <!-- ============================================== -->
     <!-- 4. PIE DE PÁGINA INFERIOR VERDE/CIAN (FIJO) -->
