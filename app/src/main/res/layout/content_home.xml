@@ -210,13 +210,5 @@
                 android:layout_gravity="center"
                 android:src="@drawable/ic_calendar" />
         </LinearLayout>
-
-        <Button
-            android:id="@+id/btnLogout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="CERRAR SESIÓN"
-            android:backgroundTint="#1EC8A3"
-            android:textColor="@android:color/white" />
     </LinearLayout>
 </ScrollView>

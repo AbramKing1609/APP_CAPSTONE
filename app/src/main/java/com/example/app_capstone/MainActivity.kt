@@ -3,7 +3,10 @@ package com.example.app_capstone
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -18,6 +21,8 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+
+data class ItemData(val name: String, val type: String)
 
 class MainActivity : AppCompatActivity() {
 
@@ -190,29 +195,97 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             R.layout.content_notifications -> {
+                // 1. Obtener contenedores y datos
+                val searchBar = newLayout.findViewById<EditText>(R.id.etSearchNotifications)
                 val container = newLayout.findViewById<LinearLayout>(R.id.containerNotifications)
-
-                val notifications = listOf(
-                    "Brayan Calderon Quevedo",
-                    "Maria Gomez Aguilar",
-                    "Ricardo Moran Hurtado",
-                    "Carlos Alcantara Aguila",
-                    "Jely Reategui Chongo",
-                    "Mario Antizana Dumas"
+                val notificationsData = listOf(
+                    ItemData("Brayan Calderon Quevedo", "Nuevo Paciente"),
+                    ItemData("Maria Gomez Aguilar", "Cita Próxima"),
+                    ItemData("Ricardo Moran Hurtado", "Seguimiento"),
+                    ItemData("Carlos Alcantara Aguila", "Nuevo Paciente"),
+                    ItemData("Jely Reategui Chongo", "Cita Próxima"),
+                    ItemData("Mario Antizana Dumas", "Seguimiento")
                 )
 
-                for (name in notifications) {
+                // Lista para almacenar las vistas de los ítems
+                val itemViews = mutableListOf<View>()
+
+                // 2. Inflar ítems y guardar las vistas
+                for (data in notificationsData) {
                     val itemView = LayoutInflater.from(this)
                         .inflate(R.layout.item_notification, container, false)
-                    itemView.findViewById<TextView>(R.id.tvNotificationName).text = name
+                    // Configurar el nombre y el tipo/estado
+                    itemView.findViewById<TextView>(R.id.tvNotificationName).text = data.name
+                    // 🔹 NOTIFICACIONES: Según item_notification.xml, este ID existe y se usa.
+                    itemView.findViewById<TextView>(R.id.tvNotificationType).text = data.type
+
                     container.addView(itemView)
+                    itemViews.add(itemView) // Guardamos la referencia a la vista
                 }
+
+                // 3. Configurar la búsqueda
+                setupSearch(searchBar, itemViews, R.id.tvNotificationName)
             }
 
+            // Lógica para Pacientes (content_patients)
+            R.layout.content_patients -> {
+                // 1. Obtener contenedores y datos
+                val searchBar = newLayout.findViewById<EditText>(R.id.etSearchPatients)
+                val container = newLayout.findViewById<LinearLayout>(R.id.containerPatients)
+                val patientsData = listOf(
+                    ItemData("Brayan Calderon Quevedo", "Nuevo Paciente"),
+                    ItemData("Maria Gomez Aguilar", "Cita Próxima"),
+                    ItemData("Ricardo Moran Hurtado", "Seguimiento"),
+                    ItemData("Carlos Alcantara Aguila", "Nuevo Paciente"),
+                    ItemData("Jely Reategui Chongo", "Cita Próxima"),
+                    ItemData("Mario Antizana Dumas", "Seguimiento")
+                )
+
+                // Lista para almacenar las vistas de los ítems
+                val itemViews = mutableListOf<View>()
+
+                // 2. Inflar ítems y guardar las vistas
+                for (data in patientsData) {
+                    val itemView = LayoutInflater.from(this)
+                        .inflate(R.layout.item_patient, container, false)
+                    // Configurar el nombre
+                    itemView.findViewById<TextView>(R.id.tvPatientName).text = data.name
+
+                    // 🔹 CORRECCIÓN 2: Se ELIMINA la línea que intentaba asignar 'data.type' a un
+                    // TextView de paciente, ya que el layout item_patient.xml proporcionado no lo tiene.
+                    // Si deseas mostrar el tipo/estado, deberás modificar el XML de item_patient.xml
+
+                    container.addView(itemView)
+                    itemViews.add(itemView) // Guardamos la referencia a la vista
+                }
+
+                // 3. Configurar la búsqueda
+                setupSearch(searchBar, itemViews, R.id.tvPatientName)
+            }
 
         }
     }
+    private fun setupSearch(searchBar: EditText, itemViews: List<View>, textViewId: Int) {
+        searchBar.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 
+            override fun afterTextChanged(s: Editable?) {
+                val query = s.toString().toLowerCase()
+
+                for (itemView in itemViews) {
+                    val nameTextView = itemView.findViewById<TextView>(textViewId)
+                    val name = nameTextView.text.toString().toLowerCase()
+
+                    if (name.contains(query)) {
+                        itemView.visibility = View.VISIBLE
+                    } else {
+                        itemView.visibility = View.GONE
+                    }
+                }
+            }
+        })
+    }
     /**
      * Muestra un diálogo para editar la información del perfil del doctor.
      * @param doctorData El mapa de datos del doctor, que ahora incluye los nombres de las colecciones de lookup.

@@ -1,71 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp"
-    android:background="#F5F5F5">
+    android:background="#FFFFFF">
 
-    <!-- Título principal -->
-    <TextView
-        android:id="@+id/tvTitlePatients"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Notificaciones"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:layout_marginBottom="16dp" />
-
-    <!-- Lista de notificaciones -->
-    <ScrollView
+    <!-- Parte superior blanca (título + búsqueda) -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="200dp"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="40dp">
 
+        <!-- Flecha y título -->
         <LinearLayout
-            android:id="@+id/containerPatients"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:gravity="center_vertical">
 
-            <!-- Ejemplo de tarjeta de notificación -->
+            <ImageView
+                android:id="@+id/btnBack"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_arrow_back"
+                android:tint="#333333" />
+
+            <TextView
+                android:id="@+id/tvTitlePatients"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pacientes"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginStart="12dp" />
+        </LinearLayout>
+
+        <!-- Barra de búsqueda -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="45dp"
+            android:background="@drawable/bg_search_bar"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="12dp"
+            android:layout_marginTop="20dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_search"
+                android:tint="#999999" />
+
+            <EditText
+                android:id="@+id/etSearchPatients"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Buscar por nombre o palabra clave"
+                android:background="@android:color/transparent"
+                android:paddingStart="10dp"
+                android:textColor="#333333"
+                android:textColorHint="#999999"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Fondo degradado verde curvo con lista de notificaciones -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="@drawable/bg_gradient_notifications_curved"
+        android:layout_marginTop="160dp"
+        android:paddingHorizontal="20dp">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:overScrollMode="never">
+
             <LinearLayout
+                android:id="@+id/containerPatients"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/ic_calendar"
-                android:padding="12dp"
-                android:layout_marginBottom="10dp">
+                android:paddingTop="55dp"
+                android:paddingBottom="80dp" />
+        </ScrollView>
+    </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tvPatientTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Nueva cita registrada"
-                    android:textStyle="bold"
-                    android:textColor="#1EC8A3"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/tvPatientMessage"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="El paciente Juan Pérez ha reservado una cita para el lunes a las 10:00 a.m."
-                    android:textColor="#555555"
-                    android:textSize="14sp"
-                    android:layout_marginTop="4dp" />
-
-                <TextView
-                    android:id="@+id/tvPatientTime"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Hace 5 minutos"
-                    android:textColor="#999999"
-                    android:textSize="12sp"
-                    android:layout_marginTop="6dp" />
-            </LinearLayout>
-
-        </LinearLayout>
-    </ScrollView>
-
-</LinearLayout>
+    <!-- Ícono central flotante -->
+    <ImageView
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="130dp"
+        android:src="@drawable/ic_notifications"
+        android:background="@drawable/bg_icon_circle"
+        android:padding="16dp"
+        android:elevation="8dp"
+        android:tint="#FFFFFF" />
+</FrameLayout>
