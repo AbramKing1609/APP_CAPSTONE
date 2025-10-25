@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Hora -->
+    <TextView
+        android:id="@+id/tvHourLabel"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:text="08:00"
+        android:textColor="#555555"
+        android:textSize="14sp"
+        android:gravity="end"
+        android:layout_marginEnd="8dp"/>
+
+    <!-- Contenedor horizontal de citas -->
+    <LinearLayout
+        android:id="@+id/containerAppointments"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="start"
+        android:divider="?android:attr/dividerHorizontal"
+        android:showDividers="middle"
+        android:dividerPadding="4dp"/>
+</LinearLayout>

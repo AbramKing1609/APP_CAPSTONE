@@ -149,9 +149,9 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Botón de Pagos -->
+        <!-- Botón de Calendario -->
         <LinearLayout
-            android:id="@+id/btnPagos"
+            android:id="@+id/btnCalendars"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -165,15 +165,15 @@
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_payments"
+                android:src="@drawable/ic_calendar"
                 app:tint="@android:color/white"
-                android:contentDescription="Pagos" />
+                android:contentDescription="Calendario" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Pagos"
+                android:text="Calendario"
                 android:textColor="@android:color/white"
                 android:textSize="12sp" />
         </LinearLayout>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Color de fondo para la cita (un azul fuerte) -->
+    <solid android:color="#4A90E2" />
+    <!-- Esquinas redondeadas -->
+    <corners android:radius="6dp" />
+</shape>

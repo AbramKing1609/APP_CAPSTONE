@@ -14,4 +14,9 @@
     <color name="selected_nav_color">#FF0000</color>  <!-- Rojo -->
     <color name="unselected_nav_color">#757575</color>  <!-- Gris -->
     <color name="peru_red">#D91023</color>
+
+    <!-- 🔹 Colores para el cronograma del Calendario (NUEVOS) 🔹 -->
+    <color name="calendar_blue">#4A90E2</color>
+    <color name="calendar_green">#7ED321</color>
+    <color name="calendar_red">#D0021B</color>
 </resources>

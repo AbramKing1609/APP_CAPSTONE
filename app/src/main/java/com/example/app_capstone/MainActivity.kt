@@ -21,15 +21,21 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import android.graphics.Color
+import androidx.cardview.widget.CardView
 
+// Clase de datos genérica para listas (Notificaciones/Pacientes)
 data class ItemData(val name: String, val type: String)
+
+// 🔹 NUEVA CLASE DE DATOS para el cronograma del calendario
+data class CalendarItemData(val hour: String, val patientName: String, val cardColor: String)
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var btnNotifications: LinearLayout
     private lateinit var btnPatients: LinearLayout
     private lateinit var btnHome: LinearLayout
-    private lateinit var btnPagos: LinearLayout
+    private lateinit var btnCalendars: LinearLayout
     private lateinit var btnLogout: LinearLayout
     private lateinit var mainContentFrame: FrameLayout
 
@@ -50,7 +56,7 @@ class MainActivity : AppCompatActivity() {
         btnNotifications = findViewById(R.id.btnNotifications)
         btnPatients = findViewById(R.id.btnPatients)
         btnHome = findViewById(R.id.btnHome)
-        btnPagos = findViewById(R.id.btnPagos)
+        btnCalendars = findViewById(R.id.btnCalendars)
         btnLogout = findViewById(R.id.btnLogout)
         mainContentFrame = findViewById(R.id.main_content_frame)
     }
@@ -70,10 +76,10 @@ class MainActivity : AppCompatActivity() {
             loadHomeContent()
         }
 
-        btnPagos.setOnClickListener {
-            selectButton(btnPagos)
-            val intent = Intent(this, PaymentsActivity::class.java)
-            startActivity(intent)
+        btnCalendars.setOnClickListener {
+            selectButton(btnCalendars)
+            // 🔹 Cargar contenido dinámico de notificaciones
+            displayContent(R.layout.content_calendars)
         }
 
         btnNotifications.setOnClickListener {
@@ -91,7 +97,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectButton(selectedButton: LinearLayout) {
         // Restablecer todos los botones
-        val buttons = listOf(btnHome, btnPagos, btnNotifications, btnPatients)
+        val buttons = listOf(btnHome, btnCalendars, btnNotifications, btnPatients)
         for (button in buttons) {
             val imageView = button.getChildAt(0) as ImageView
             val textView = button.getChildAt(1) as TextView
@@ -263,6 +269,72 @@ class MainActivity : AppCompatActivity() {
                 setupSearch(searchBar, itemViews, R.id.tvPatientName)
             }
 
+            R.layout.content_calendars -> {
+                val containerSchedule = newLayout.findViewById<LinearLayout>(R.id.containerSchedule)
+
+                // Datos de ejemplo (pueden venir de Firestore luego)
+                val appointments = listOf(
+                    CalendarItemData("08:00", "Bryan Calderon", "#4CAF50"),
+                    CalendarItemData("08:30", "Ricardo Moran", "#2196F3"),
+                    CalendarItemData("08:45", "María Gomez", "#FF9800"),
+                    CalendarItemData("09:00", "Carlos Alcántara", "#9C27B0"),
+                    CalendarItemData("10:00", "Jely Reátegui", "#009688"),
+                    CalendarItemData("10:30", "Mario Antizana", "#E91E63")
+                )
+
+                // Generar horas desde 8 a 22
+                for (hour in 8..22) {
+                    val hourLabel = String.format("%02d:00", hour)
+                    val hourView = LayoutInflater.from(this)
+                        .inflate(R.layout.item_calendar_hour, containerSchedule, false)
+
+                    val tvHourLabel = hourView.findViewById<TextView>(R.id.tvHourLabel)
+                    val containerAppointments = hourView.findViewById<LinearLayout>(R.id.containerAppointments)
+
+                    tvHourLabel.text = hourLabel
+
+                    // Filtrar citas de esa hora
+                    val currentHourAppointments = appointments.filter {
+                        it.hour.startsWith(String.format("%02d", hour))
+                    }
+
+                    // Inflar cada cita de esa hora
+                    for (appt in currentHourAppointments) {
+                        val itemView = LayoutInflater.from(this)
+                            .inflate(R.layout.item_calendar_entry, containerAppointments, false)
+
+                        val cardAppointment = itemView.findViewById<CardView>(R.id.cardAppointment)
+                        val tvPatientName = itemView.findViewById<TextView>(R.id.tvPatientName)
+                        val tvAvatarInitials = itemView.findViewById<TextView>(R.id.tvAvatarInitials)
+
+                        tvPatientName.text = appt.patientName
+                        val initials = appt.patientName.split(" ").map { it.first() }.take(2).joinToString("")
+                        tvAvatarInitials.text = initials
+
+                        val cardColor = Color.parseColor(appt.cardColor)
+                        (cardAppointment.getChildAt(0) as LinearLayout).setBackgroundColor(cardColor)
+
+                        // 🔹 Listener para mostrar ventana emergente (dialog)
+                        cardAppointment.setOnClickListener {
+                            val builder = AlertDialog.Builder(this)
+                            builder.setTitle("Detalles de la cita")
+                            builder.setMessage(
+                                "👤 Paciente: ${appt.patientName}\n🕓 Hora: ${appt.hour}"
+                            )
+                            builder.setPositiveButton("Cerrar", null)
+                            builder.show()
+                        }
+
+                        containerAppointments.addView(itemView)
+                    }
+
+                    containerSchedule.addView(hourView)
+                }
+
+                newLayout.findViewById<ImageView>(R.id.btnBack)?.setOnClickListener {
+                    loadHomeContent()
+                }
+            }
         }
     }
     private fun setupSearch(searchBar: EditText, itemViews: List<View>, textViewId: Int) {
