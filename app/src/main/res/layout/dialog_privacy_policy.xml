@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#FFFFFF">
+
+    <!-- ============================================== -->
+    <!-- 1. ENCABEZADO SUPERIOR VERDE/CIAN (FIJO) -->
+    <!-- ============================================== -->
+    <FrameLayout
+        android:id="@+id/fixedTopHeader"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="@drawable/header_top_background"
+        android:paddingTop="10dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:text="Dr_Pe"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF" />
+    </FrameLayout>
+
+    <!-- ============================================== -->
+    <!-- 2. CONTENIDO PRINCIPAL DESPLAZABLE -->
+    <!-- ============================================== -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvCompanyName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dr. Pe"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#1A232A"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tvPolicyTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Política de Privacidad y Términos de Uso"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:id="@+id/tvPolicyContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#444444"
+                android:textSize="15sp"
+                android:lineSpacingExtra="4dp"
+                android:text="
+1. CONDICIONES GENERALES DE USO\n\n
+La Empresa podrá, en cualquier momento y sin necesidad de previo aviso, realizar cambios y actualizaciones de las presentes Condiciones de Uso y de la Política de Privacidad. Estos cambios serán publicados en la Aplicación y serán efectivos desde el momento de su publicación. Como consecuencia de lo anterior, el usuario deberá revisar periódicamente si hay cambios en estas Condiciones y, tanto si existe consentimiento expreso como si no, si el usuario continúa usando el servicio tras la publicación, ello implica la aceptación y asunción de los mismos.\n\n
+En caso de que no esté de acuerdo con las actualizaciones de las Condiciones de uso o de la Política de Privacidad, podrá renunciar dejando de usar el Servicio.\n\n
+El acceso de la aplicación es gratuito salvo en lo relativo al coste de la conexión a través de la red de telecomunicaciones suministrada por el proveedor de acceso contratado por los usuarios.\n\n
+El uso de la aplicación atribuye la condición de usuario de la misma e implica la lectura, entendimiento y aceptación de todos los términos y condiciones recogidas por la presente.\n\n
+USO DE LA APLICACIÓN Y SUS SERVICIOS\n\n
+El Usuario reconoce y acepta que el uso de los contenidos y/o servicios ofrecidos por la presente aplicación será bajo su exclusivo riesgo y/o responsabilidad.\n\n
+El Usuario se compromete a utilizar la presente aplicación y todo su contenido y Servicios de conformidad con la ley, la moral, el orden público y las presentes Condiciones de Uso, y las Condiciones Particulares que, en su caso, le sean de aplicación.\n\n
+Asimismo, se compromete a hacer un uso adecuado de los servicios y/o contenidos de la aplicación móvil y a no emplearlos para realizar actividades ilícitas o constitutivas de delito, que atenten contra los derechos de terceros y/o que infrinjan la regulación sobre propiedad intelectual e industrial, o cualesquiera otras normas del ordenamiento jurídico aplicable.\n\n
+2. POLÍTICA DE PRIVACIDAD\n\n
+Todos los datos que se solicitan a los usuarios y clientes a través de la aplicación serán necesarios para prestar el servicio objeto del servicio en virtud del cual se ha procedido al uso de la aplicación en los correspondientes dispositivos.\n\n
+CONSENTIMIENTO\n\n
+La utilización de la aplicación dará lugar al tratamiento de datos de carácter personal que Dr-Pe, en su caso, llevará a cabo de acuerdo con las normas y procedimientos internos establecidos al efecto, que son conocidos por los clientes y usuarios y autorizados por éstos.\n\n
+GARANTÍA Y PROTECCIÓN DE DATOS\n\n
+En el tratamiento de los datos de carácter personal, Dr-Pe se compromete a garantizar y proteger las libertades públicas y los derechos fundamentales de las personas físicas de los ficheros y, especialmente, su honor y su intimidad familiar y personal, obligándose en este sentido, a efectuar el correspondiente tratamiento de datos de acuerdo con la normativa vigente en cada momento y a guardar el más absoluto secreto en relación con la información entregada por los clientes y usuarios.\n\n
+Los datos de carácter personal objeto de tratamiento no se utilizarán para otras finalidades que no se encuentren aquí recogidas o, en su caso, por otro documento o contrato que vinculase a ambas partes con condiciones particulares."
+                android:scrollbars="vertical" />
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ============================================== -->
+    <!-- 3. PIE DE PÁGINA INFERIOR VERDE/CIAN (FIJO) -->
+    <!-- ============================================== -->
+    <FrameLayout
+        android:id="@+id/fixedBottomFooter"
+        android:layout_width="match_parent"
+        android:layout_height="35dp"
+        android:background="@drawable/footer_bottom_background">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Sistema Médico"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF" />
+    </FrameLayout>
+
+</LinearLayout>

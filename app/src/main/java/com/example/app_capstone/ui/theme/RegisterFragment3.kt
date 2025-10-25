@@ -1,5 +1,6 @@
 package com.example.app_capstone
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -27,6 +28,7 @@ class RegisterFragment3 : Fragment(), RegisterActivity.RegisterFragmentInterface
     ): View? {
         val view = inflater.inflate(R.layout.fragment_register3, container, false)
         initViews(view)
+        setupPolicyDialog()
         return view
     }
 
@@ -42,6 +44,31 @@ class RegisterFragment3 : Fragment(), RegisterActivity.RegisterFragmentInterface
         chkAcceptTerms = view.findViewById(R.id.chkAcceptTerms)
     }
 
+    // 🔹 Mostrar política al tocar el texto del checkbox
+    private fun setupPolicyDialog() {
+        chkAcceptTerms.setOnClickListener {
+            // Evita que se marque directamente
+            chkAcceptTerms.isChecked = false
+
+            val dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_privacy_policy, null)
+
+            val dialog = AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .setCancelable(false)
+                .setPositiveButton("Aceptar") { d, _ ->
+                    chkAcceptTerms.isChecked = true
+                    d.dismiss()
+                }
+                .setNegativeButton("Cancelar") { d, _ ->
+                    chkAcceptTerms.isChecked = false
+                    d.dismiss()
+                }
+                .create()
+
+            dialog.show()
+        }
+    }
     override fun validateFields(): Boolean {
         var isValid = true
 
@@ -78,4 +105,12 @@ class RegisterFragment3 : Fragment(), RegisterActivity.RegisterFragmentInterface
     fun getPassword(): String {
         return etPassword.text.toString()
     }
+    fun isTermsAccepted(): Boolean {
+        return chkAcceptTerms.isChecked
+    }
+
+    fun showPolicyDialog() {
+        chkAcceptTerms.performClick()
+    }
+
 }

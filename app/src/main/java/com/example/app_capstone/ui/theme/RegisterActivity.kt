@@ -121,6 +121,26 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         btnRegister.setOnClickListener {
+            val lastFragment = supportFragmentManager
+                .findFragmentByTag("f${viewPager.adapter!!.getItemId(2)}") as? RegisterFragment3
+
+            // ✅ Validar los campos del último fragmento antes de seguir
+            if (lastFragment == null || !lastFragment.validateFields()) {
+                Toast.makeText(this, "Por favor, complete correctamente los campos del registro.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // ✅ Verificar si aceptó las políticas antes de cualquier verificación
+            if (!lastFragment.isTermsAccepted()) {
+                Toast.makeText(this, "Debe aceptar las políticas de privacidad antes de continuar.", Toast.LENGTH_LONG).show()
+                lastFragment.showPolicyDialog() // Muestra el diálogo directamente
+                return@setOnClickListener
+            }
+
+            // Guardamos la aceptación de términos en formData
+            saveFormData("TERMINOSACEPTADO", true)
+
+            // ✅ Ahora sí, continuamos con las validaciones externas
             val dni = formData["DNI"]?.toString() ?: ""
             val nombre = formData["NOMBRE"]?.toString() ?: ""
             val apellido = formData["APELLIDO"]?.toString() ?: ""
@@ -139,6 +159,7 @@ class RegisterActivity : AppCompatActivity() {
             Log.d("RegisterActivity", "Enviando DNI: $dni, Nombre: $nombre, Apellido: $apellido, Colegiatura: $colegiatura")
             controlDNi(dni, nombre, apellido)
         }
+
 
         tvLoginLink.setOnClickListener {
             startActivity(Intent(this, LoginActivity::class.java))
