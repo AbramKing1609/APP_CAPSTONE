@@ -325,42 +325,90 @@ class RegisterActivity : AppCompatActivity() {
                         val uid = authTask.result?.user?.uid ?: return@addOnCompleteListener
                         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
-                        formData["ID_MEDICO"] = uid
-                        formData["ID_USUARIO"] = uid
-                        formData["FECHAACEPTACION"] = currentDate
-                        formData["PACIENTES_ATENDIDOS"] = 0
-                        formData["FOTO_PERFIL"] = ""
-                        formData["TERMINOSACEPTADO"] = aceptoTerminos
+                        // OBTENER EL SIGUIENTE ID NUMÉRICO
+                        getNextDoctorId { nextId ->
+                            if (nextId != null) {
+                                // ✅ ELIMINAMOS ID_HOSPITAL de formData
+                                val idHospital = formData.remove("ID_HOSPITAL") as? Long ?: 1
 
-                        val userData = hashMapOf(
-                            "ID_USUARIO" to uid,
-                            "CORREO" to email,
-                            "CONTRASEÑA" to password, // Nota: No guardar en producción
-                            "FECHA_REGISTRO" to currentDate,
-                            "TIPO_USUARIO" to "medico"
-                        )
+                                formData["ID_MEDICO"] = nextId
+                                formData["ID_USUARIO"] = nextId
+                                formData["FECHAACEPTACION"] = currentDate
+                                formData["PACIENTES_ATENDIDOS"] = 0
+                                formData["FOTO_PERFIL"] = ""
+                                formData["TERMINOSACEPTADO"] = aceptoTerminos
 
-                        db.collection("usuario").document(uid).set(userData)
-                            .addOnSuccessListener {
-                                db.collection("medicos").document(uid).set(formData)
+                                val userData = hashMapOf(
+                                    "ID_USUARIO" to nextId,
+                                    "ID_FIREBASE" to uid,
+                                    "CORREO" to email,
+                                    "CONTRASEÑA" to password,
+                                    "FECHA_REGISTRO" to currentDate,
+                                    "TIPO_USUARIO" to "medico"
+                                )
+
+                                db.collection("usuario").document(uid).set(userData)
                                     .addOnSuccessListener {
-                                        Toast.makeText(this, "Registro exitoso", Toast.LENGTH_SHORT).show()
-                                        startActivity(Intent(this, LoginActivity::class.java))
-                                        finish()
+                                        // ✅ PRIMERO: Guardar el médico SIN ID_HOSPITAL
+                                        db.collection("medicos").document(uid).set(formData)
+                                            .addOnSuccessListener {
+                                                // ✅ SEGUNDO: Guardar la relación en doctor_hospital
+                                                val doctorHospitalData = hashMapOf(
+                                                    "ID_MEDICO" to nextId,
+                                                    "ID_HOSPITAL" to idHospital
+                                                )
+
+                                                db.collection("doctor_hospital").document()
+                                                    .set(doctorHospitalData)
+                                                    .addOnSuccessListener {
+                                                        Toast.makeText(this, "Registro exitoso", Toast.LENGTH_SHORT).show()
+                                                        startActivity(Intent(this, LoginActivity::class.java))
+                                                        finish()
+                                                    }
+                                                    .addOnFailureListener { e ->
+                                                        // Si falla la relación, eliminar el médico
+                                                        db.collection("medicos").document(uid).delete()
+                                                        auth.currentUser?.delete()
+                                                        Toast.makeText(this, "Error guardando relación hospital: ${e.message}", Toast.LENGTH_LONG).show()
+                                                    }
+                                            }
+                                            .addOnFailureListener { e ->
+                                                auth.currentUser?.delete()
+                                                Toast.makeText(this, "Error guardando datos del perfil: ${e.message}", Toast.LENGTH_LONG).show()
+                                            }
                                     }
                                     .addOnFailureListener { e ->
                                         auth.currentUser?.delete()
-                                        Toast.makeText(this, "Error guardando datos del perfil: ${e.message}", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(this, "Error guardando datos de usuario: ${e.message}", Toast.LENGTH_LONG).show()
                                     }
-                            }
-                            .addOnFailureListener { e ->
+                            } else {
                                 auth.currentUser?.delete()
-                                Toast.makeText(this, "Error guardando datos de usuario: ${e.message}", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this, "Error generando ID numérico", Toast.LENGTH_LONG).show()
                             }
+                        }
                     } else {
                         Toast.makeText(this, "Error de autenticación: ${authTask.exception?.message}", Toast.LENGTH_LONG).show()
                     }
                 }
+        }
+    }
+
+    // Función para obtener el siguiente ID numérico
+    private fun getNextDoctorId(callback: (Int?) -> Unit) {
+        val counterRef = db.collection("counters").document("medicos")
+
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(counterRef)
+            val currentCount = snapshot.getLong("ultimo_id") ?: 0L
+            val newCount = currentCount + 1
+
+            transaction.set(counterRef, hashMapOf("ultimo_id" to newCount))
+            newCount.toInt()
+        }.addOnSuccessListener { nextId ->
+            callback(nextId)
+        }.addOnFailureListener { e ->
+            Log.e("getNextDoctorId", "Error al obtener ID: ${e.message}")
+            callback(null)
         }
     }
 

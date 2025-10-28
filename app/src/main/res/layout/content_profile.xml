@@ -242,14 +242,19 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/tvProfileSpecialty"
+                <AutoCompleteTextView
+                    android:id="@+id/actvSpecialty"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="Psiquiatría"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:background="@android:color/transparent"
+                    android:textColor="#000000"
+                    android:completionThreshold="1"
+                    android:imeOptions="actionDone"
+                    android:singleLine="true" />
 
                 <ImageView
                     android:id="@+id/ivEditDescription"
@@ -302,14 +307,19 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/tvUniversity"
+                <AutoCompleteTextView
+                    android:id="@+id/actvUniversity"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="Universidad Nacional Mayor de San Marcos"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:background="@android:color/transparent"
+                    android:textColor="#000000"
+                    android:completionThreshold="1"
+                    android:imeOptions="actionDone"
+                    android:singleLine="true" />
 
                 <ImageView
                     android:id="@+id/ivEditUniversity"
@@ -332,14 +342,19 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/tvHospital"
+                <AutoCompleteTextView
+                    android:id="@+id/actvHospital"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="Edgardo Rebagliati Martins"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:background="@android:color/transparent"
+                    android:textColor="#000000"
+                    android:completionThreshold="1"
+                    android:imeOptions="actionDone"
+                    android:singleLine="true" />
 
                 <ImageView
                     android:id="@+id/ivEditHospital"
@@ -362,14 +377,19 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/tvDistrito"
+                <AutoCompleteTextView
+                    android:id="@+id/actvDistrito"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="Lima"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:background="@android:color/transparent"
+                    android:textColor="#000000"
+                    android:completionThreshold="1"
+                    android:imeOptions="actionDone"
+                    android:singleLine="true" />
 
                 <ImageView
                     android:id="@+id/ivEditDistrito"

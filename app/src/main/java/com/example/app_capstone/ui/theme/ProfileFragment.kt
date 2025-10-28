@@ -25,6 +25,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import android.app.Activity
+import android.view.inputmethod.EditorInfo
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import java.util.Calendar // ⬅️ NUEVO: Para obtener la hora/fecha actual
@@ -43,25 +44,29 @@ class ProfileActivity : AppCompatActivity() {
     private val PERMISSION_REQUEST_CODE = 200
     private lateinit var ivProfilePicture: ImageView
 
-
+    // En la parte superior de la clase, después de las otras declaraciones
+    private lateinit var actvUniversity: AutoCompleteTextView
+    private lateinit var actvHospital: AutoCompleteTextView
+    private lateinit var actvDistrito: AutoCompleteTextView
+    private lateinit var actvSpecialty: AutoCompleteTextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.content_profile)
 
-        // 🔹 Referencias de vistas
+        // 🔹 Referencias de vistas EXISTENTES...
         val tvProfileName = findViewById<TextView>(R.id.tvProfileName)
-        val tvProfileSpecialty = findViewById<TextView>(R.id.tvProfileSpecialty)
-        val tvUniversity = findViewById<TextView>(R.id.tvUniversity)
         val tvExperienceYears = findViewById<TextView>(R.id.tvExperienceYears)
-        val tvHospital = findViewById<TextView>(R.id.tvHospital)
         val tvAdditionalInfo = findViewById<TextView>(R.id.tvAdditionalInfo)
         val tvAge = findViewById<TextView>(R.id.tvAge)
         val etContactNumber = findViewById<EditText>(R.id.etContactNumber)
-
-        // 🔹 NUEVOS CAMPOS (Distrito, Nacionalidad)
-        val tvDistrito = findViewById<TextView>(R.id.tvDistrito)
         val tvNacionalidad = findViewById<TextView>(R.id.tvNacionalidad)
+
+        // 🔹 NUEVAS REFERENCIAS para AutoCompleteTextView
+        actvUniversity = findViewById(R.id.actvUniversity)
+        actvHospital = findViewById(R.id.actvHospital)
+        actvDistrito = findViewById(R.id.actvDistrito)
+        actvSpecialty = findViewById(R.id.actvSpecialty)
 
         // 🔹 CAMPOS DE HORARIO/FECHAS
         llHorariosContainer = findViewById<LinearLayout>(R.id.llHorariosContainer)
@@ -247,47 +252,18 @@ class ProfileActivity : AppCompatActivity() {
         // -------------------------------------------------------------
 
         ivEditUniversity.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "universidad",
-                idFieldName = "ID_UNIVERSIDAD",
-                nameFieldName = "NOMBRE_UNIVERSIDAD",
-                currentName = tvUniversity.text.toString(),
-                textView = tvUniversity,
-                medicoFieldKey = "ID_UNIVERSIDAD"
-            )
+            showUniversitySelectionDialog() // ✅ MANTIENE EL DIÁLOGO CON SUGERENCIAS
         }
 
         ivEditHospital.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "hospital",
-                idFieldName = "ID_HOSPITAL",
-                nameFieldName = "NOMBRE_HOSPITAL",
-                currentName = tvHospital.text.toString(),
-                textView = tvHospital,
-                medicoFieldKey = "ID_HOSPITAL"
-            )
+            editHospitalField() // ✅ YA TIENES ESTE (ESTÁ BIEN)
         }
 
         ivEditSpecialty.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "especialidad",
-                idFieldName = "ID_ESPECIALIDAD",
-                nameFieldName = "ESPECIALIDAD",
-                currentName = tvProfileSpecialty.text.toString(),
-                textView = tvProfileSpecialty,
-                medicoFieldKey = "ID_ESPECIALIDAD"
-            )
+            showSpecialtySelectionDialog() // ✅ NUEVO DIÁLOGO CON SUGERENCIAS
         }
-
         ivEditDistrito.setOnClickListener {
-            editFieldWithAutoCreate(
-                collectionName = "distrito",
-                idFieldName = "ID_DISTRITO",
-                nameFieldName = "NOMBRE_DISTRITO",
-                currentName = tvDistrito.text.toString(),
-                textView = tvDistrito,
-                medicoFieldKey = "ID_DISTRITO"
-            )
+            showDistritoSelectionDialog() // ✅ MANTIENE EL DIÁLOGO CON SUGERENCIAS
         }
 
         ivEditNacionalidad.setOnClickListener {
@@ -300,6 +276,7 @@ class ProfileActivity : AppCompatActivity() {
                 medicoFieldKey = "ID_NACIONALIDAD"
             )
         }
+
 
 // -------------------------------------------------------------
 // ⬅️ Lógica para el ícono de ATRÁS
@@ -435,12 +412,13 @@ class ProfileActivity : AppCompatActivity() {
 
                 val idEspecialidad = doctorData["ID_ESPECIALIDAD"] as? Long
                 val idUniversidad = doctorData["ID_UNIVERSIDAD"] as? Long
-                val idHospital = doctorData["ID_HOSPITAL"] as? Long
+                // ❌ ELIMINADO: val idHospital = doctorData["ID_HOSPITAL"] as? Long
                 val idDistrito = doctorData["ID_DISTRITO"] as? Long
                 val idNacionalidad = doctorData["ID_NACIONALIDAD"] as? Long
                 val expAnios = doctorData["EXP_ANIOS"]?.toString() ?: "N/A"
                 val additionalInfo = doctorData["INFO_ADIC"] as? String ?: "N/A"
                 val photoUrl = doctorData["FOTO_PERFIL"] as? String
+                val idMedico = doctorData["ID_MEDICO"] as? Long // ✅ NECESITAMOS EL ID_NUMÉRICO
 
                 // ⏰ NUEVOS CAMPOS DE HORARIO Y FECHAS
                 val horarioList = doctorData["HORARIO_ATENCION"] as? List<String> ?: listOf("N/A")
@@ -458,6 +436,14 @@ class ProfileActivity : AppCompatActivity() {
                     ivProfilePicture.setImageResource(R.drawable.ic_profile)
                 }
 
+                // ✅ NUEVO: Cargar hospital desde doctor_hospital
+                val hospitalTask = if (idMedico != null) {
+                    db.collection("doctor_hospital")
+                        .whereEqualTo("ID_MEDICO", idMedico)
+                        .limit(1).get()
+                } else {
+                    Tasks.forResult(null as QuerySnapshot?)
+                }
 
                 val specialtyTask = idEspecialidad?.let {
                     db.collection("especialidad")
@@ -468,12 +454,6 @@ class ProfileActivity : AppCompatActivity() {
                 val universityTask = idUniversidad?.let {
                     db.collection("universidad")
                         .whereEqualTo("ID_UNIVERSIDAD", it)
-                        .limit(1).get()
-                } ?: Tasks.forResult(null as QuerySnapshot?)
-
-                val hospitalTask = idHospital?.let {
-                    db.collection("hospital")
-                        .whereEqualTo("ID_HOSPITAL", it)
                         .limit(1).get()
                 } ?: Tasks.forResult(null as QuerySnapshot?)
 
@@ -489,11 +469,12 @@ class ProfileActivity : AppCompatActivity() {
                         .limit(1).get()
                 } ?: Tasks.forResult(null as QuerySnapshot?)
 
-
+                // ✅ AGREGAMOS hospitalTask a la lista de tareas
+// ✅ AGREGAMOS hospitalTask a la lista de tareas
                 Tasks.whenAllSuccess<Any>(
                     specialtyTask,
                     universityTask,
-                    hospitalTask,
+                    hospitalTask, // ✅ NUEVO: Tarea para hospital
                     distritoTask,
                     nacionalidadTask
                 ).addOnSuccessListener { results ->
@@ -503,26 +484,43 @@ class ProfileActivity : AppCompatActivity() {
                     val universityName = (results.getOrNull(1) as? QuerySnapshot)
                         ?.documents?.firstOrNull()?.getString("NOMBRE_UNIVERSIDAD") ?: "N/A"
 
-                    val hospitalName = (results.getOrNull(2) as? QuerySnapshot)
-                        ?.documents?.firstOrNull()?.getString("NOMBRE_HOSPITAL") ?: "N/A"
-
                     val distritoName = (results.getOrNull(3) as? QuerySnapshot)
                         ?.documents?.firstOrNull()?.getString("NOMBRE_DISTRITO") ?: "N/A"
 
                     val nacionalidadName = (results.getOrNull(4) as? QuerySnapshot)
                         ?.documents?.firstOrNull()?.getString("NACIONALIDAD") ?: "N/A"
 
-                    // 🔹 Mostrar datos
+                    // ✅ NUEVO: Cargar y mostrar el hospital
+                    val hospitalResult = results.getOrNull(2) as? QuerySnapshot
+                    if (hospitalResult != null && !hospitalResult.isEmpty) {
+                        val hospitalDoc = hospitalResult.documents.first()
+                        val idHospital = hospitalDoc.getLong("ID_HOSPITAL")
+                        if (idHospital != null) {
+                            loadHospitalName(idHospital) { hospitalName ->
+                                actvHospital.setText(hospitalName ?: "N/A")
+                            }
+                        } else {
+                            actvHospital.setText("N/A")
+                        }
+                    } else {
+                        actvHospital.setText("N/A")
+                    }
+
+                    // 🔹 Mostrar datos (USANDO AutoCompleteTextView ahora)
                     findViewById<TextView>(R.id.tvProfileName).text = "$name $lastName"
-                    findViewById<TextView>(R.id.tvProfileSpecialty).text = specialtyName
-                    findViewById<EditText>(R.id.etContactNumber).setText(telefono)
+                    actvSpecialty.setText(specialtyName) // ✅ NUEVO - USAR AutoCompleteTextView                    findViewById<EditText>(R.id.etContactNumber).setText(telefono)
                     findViewById<TextView>(R.id.tvAge).text = "$edad años"
-                    findViewById<TextView>(R.id.tvUniversity).text = universityName
+                    actvUniversity.setText(universityName) // ✅ NUEVO
                     findViewById<TextView>(R.id.tvExperienceYears).text = expAnios
-                    findViewById<TextView>(R.id.tvHospital).text = hospitalName
                     findViewById<TextView>(R.id.tvAdditionalInfo).text = additionalInfo
-                    findViewById<TextView>(R.id.tvDistrito).text = distritoName
+                    actvDistrito.setText(distritoName) // ✅ NUEVO
                     findViewById<TextView>(R.id.tvNacionalidad).text = nacionalidadName
+
+                    // ✅ CARGAR SUGERENCIAS para los AutoCompleteTextView
+                    loadUniversitySuggestions()
+                    loadHospitalSuggestions()
+                    loadDistritoSuggestions()
+                    loadSpecialtySuggestions()
 
 // ⏰ Mostrar Horario y Fechas (listas)
                     val tvHorario = findViewById<TextView>(R.id.tvHorario)
@@ -594,7 +592,23 @@ class ProfileActivity : AppCompatActivity() {
             }
     }
 
-
+    /**
+     * Función auxiliar para cargar el nombre del hospital desde su ID
+     */
+    private fun loadHospitalName(idHospital: Long, callback: (String?) -> Unit) {
+        db.collection("hospital")
+            .whereEqualTo("ID_HOSPITAL", idHospital)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { documents ->
+                val hospitalName = documents.documents.firstOrNull()?.getString("NOMBRE_HOSPITAL")
+                callback(hospitalName)
+            }
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al cargar nombre del hospital", e)
+                callback(null)
+            }
+    }
     /**
      * Verifica los permisos de lectura de almacenamiento antes de abrir la galería.
      */
@@ -830,7 +844,32 @@ class ProfileActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Versión sobrecargada de updateMedicoField para AutoCompleteTextView
+     */
+    private fun updateMedicoField(
+        userId: String,
+        fieldKey: String,
+        newId: Long?,
+        textView: AutoCompleteTextView,  // ✅ PARA AutoCompleteTextView
+        newDisplayName: String
+    ) {
+        if (newId == null) return
 
+        db.collection("medicos").document(userId)
+            .update(fieldKey, newId)
+            .addOnSuccessListener {
+                textView.setText(newDisplayName)  // ✅ USAR setText()
+                Toast.makeText(this, "Actualizado correctamente", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Error al actualizar médico", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    /**
+     * Versión original para TextView (YA EXISTE EN TU CÓDIGO)
+     */
     private fun updateMedicoField(
         userId: String,
         fieldKey: String,
@@ -996,4 +1035,435 @@ class ProfileActivity : AppCompatActivity() {
             }
     }
 
+    /**
+     * Nueva función para editar la relación hospital-médico
+     */
+    private fun editHospitalField() {
+        val currentUser = auth.currentUser ?: return
+        val userId = currentUser.uid
+
+        // Primero obtener el ID_MEDICO numérico
+        db.collection("medicos").document(userId).get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO")
+
+                if (idMedico == null) {
+                    Toast.makeText(this, "Error: ID médico no encontrado", Toast.LENGTH_SHORT).show()
+                    return@addOnSuccessListener
+                }
+
+                // Obtener el hospital actual
+                db.collection("doctor_hospital")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .limit(1)
+                    .get()
+                    .addOnSuccessListener { hospitalDocs ->
+                        val currentHospitalId = hospitalDocs.documents.firstOrNull()?.getLong("ID_HOSPITAL")
+                        var currentHospitalName = "N/A"
+
+                        // Si hay hospital actual, cargar su nombre
+                        if (currentHospitalId != null) {
+                            loadHospitalName(currentHospitalId) { hospitalName ->
+                                currentHospitalName = hospitalName ?: "N/A"
+                                showHospitalSelectionDialog(idMedico, currentHospitalId, currentHospitalName, actvHospital)  // ✅ USAR actvHospital
+                            }
+                        } else {
+                            showHospitalSelectionDialog(idMedico, currentHospitalId, currentHospitalName, actvHospital)  // ✅ USAR actvHospital
+                        }
+                    }
+                    .addOnFailureListener {
+                        showHospitalSelectionDialog(idMedico, null, "N/A", actvHospital)  // ✅ USAR actvHospital
+                    }
+            }
+    }
+
+    /**
+     * Diálogo para seleccionar/crear hospital
+     */
+    /**
+     * Diálogo para seleccionar/crear hospital (MEJORADA)
+     */
+    private fun showHospitalSelectionDialog(idMedico: Long, currentHospitalId: Long?, currentHospitalName: String, textView: AutoCompleteTextView) {
+        // Crear un AutoCompleteTextView para el diálogo
+        val actvDialog = AutoCompleteTextView(this)
+        actvDialog.setPadding(50, 30, 50, 30)
+        actvDialog.setText(currentHospitalName)
+        actvDialog.hint = "Escriba o seleccione un hospital"
+
+        // Cargar sugerencias para el diálogo
+        db.collection("hospital")
+            .get()
+            .addOnSuccessListener { documents ->
+                val hospitalNames = documents.mapNotNull { it.getString("NOMBRE_HOSPITAL") }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, hospitalNames)
+                actvDialog.setAdapter(adapter)
+                actvDialog.threshold = 1
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle("Editar Hospital")
+            .setView(actvDialog)
+            .setPositiveButton("Guardar") { _, _ ->
+                val newHospitalName = actvDialog.text.toString().trim()
+
+                if (newHospitalName.isEmpty()) {
+                    Toast.makeText(this, "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                // Usar la misma lógica de auto-creación pero para la relación doctor_hospital
+                editFieldWithAutoCreateForHospital(
+                    idMedico = idMedico,
+                    currentHospitalId = currentHospitalId,
+                    newHospitalName = newHospitalName,
+                    textView = textView
+                )
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    /**
+     * Versión modificada de editFieldWithAutoCreate para hospitales
+     */
+    private fun editFieldWithAutoCreateForHospital(
+        idMedico: Long,
+        currentHospitalId: Long?,
+        newHospitalName: String,
+        textView: AutoCompleteTextView  // ✅ CORREGIDO
+    ) {
+        val collectionName = "hospital"
+        val idFieldName = "ID_HOSPITAL"
+        val nameFieldName = "NOMBRE_HOSPITAL"
+
+        val collectionRef = db.collection(collectionName)
+
+        // Buscar si el hospital ya existe
+        collectionRef.whereEqualTo(nameFieldName, newHospitalName).get()
+            .addOnSuccessListener { snapshot ->
+                if (!snapshot.isEmpty) {
+                    // Hospital existe - usar su ID
+                    val existingHospital = snapshot.documents.first()
+                    val existingId = existingHospital.getLong(idFieldName)
+                    val displayName = existingHospital.getString(nameFieldName) ?: newHospitalName
+
+                    updateDoctorHospitalRelation(idMedico, existingId, displayName, textView)
+                } else {
+                    // Hospital no existe - crear nuevo
+                    collectionRef.orderBy(idFieldName, Query.Direction.DESCENDING)
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener { maxResult ->
+                            val lastId = maxResult.documents.firstOrNull()?.getLong(idFieldName) ?: 0L
+                            val newId = lastId + 1
+
+                            val newDoc = hashMapOf(
+                                idFieldName to newId,
+                                nameFieldName to newHospitalName
+                            )
+
+                            collectionRef.document().set(newDoc)
+                                .addOnSuccessListener {
+                                    updateDoctorHospitalRelation(idMedico, newId, newHospitalName, textView)
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(this, "Error al crear nuevo hospital", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(this, "Error al obtener último ID", Toast.LENGTH_SHORT).show()
+                        }
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Error al buscar hospital", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    /**
+     * Actualiza la relación médico-hospital en doctor_hospital
+     */
+    private fun updateDoctorHospitalRelation(idMedico: Long, hospitalId: Long?, hospitalName: String, textView: AutoCompleteTextView) {
+        if (hospitalId == null) return
+
+        // Primero eliminar cualquier relación existente
+        db.collection("doctor_hospital")
+            .whereEqualTo("ID_MEDICO", idMedico)
+            .get()
+            .addOnSuccessListener { existingDocs ->
+                val batch = db.batch()
+                existingDocs.documents.forEach { doc ->
+                    batch.delete(doc.reference)
+                }
+
+                // Agregar nueva relación
+                val newRelation = hashMapOf(
+                    "ID_MEDICO" to idMedico,
+                    "ID_HOSPITAL" to hospitalId
+                )
+                val newDocRef = db.collection("doctor_hospital").document()
+                batch.set(newDocRef, newRelation)
+
+                batch.commit()
+                    .addOnSuccessListener {
+                        textView.setText(hospitalName)  // ✅ USAR setText() en lugar de text
+                        Toast.makeText(this, "Hospital actualizado correctamente", Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(this, "Error al actualizar relación hospital", Toast.LENGTH_SHORT).show()
+                    }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Error al eliminar relaciones anteriores", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    /**
+     * Carga sugerencias de universidades desde Firestore
+     */
+    private fun loadUniversitySuggestions() {
+        db.collection("universidad")
+            .get()
+            .addOnSuccessListener { documents ->
+                val universityNames = documents.mapNotNull { it.getString("NOMBRE_UNIVERSIDAD") }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, universityNames)
+                actvUniversity.setAdapter(adapter)
+            }
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al cargar universidades: ${e.message}")
+            }
+    }
+
+    /**
+     * Carga sugerencias de hospitales desde Firestore
+     */
+    private fun loadHospitalSuggestions() {
+        db.collection("hospital")
+            .get()
+            .addOnSuccessListener { documents ->
+                val hospitalNames = documents.mapNotNull { it.getString("NOMBRE_HOSPITAL") }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, hospitalNames)
+                actvHospital.setAdapter(adapter)
+            }
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al cargar hospitales: ${e.message}")
+            }
+    }
+
+    /**
+     * Carga sugerencias de distritos desde Firestore
+     */
+    private fun loadDistritoSuggestions() {
+        db.collection("distrito")
+            .get()
+            .addOnSuccessListener { documents ->
+                val distritoNames = documents.mapNotNull { it.getString("NOMBRE_DISTRITO") }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, distritoNames)
+                actvDistrito.setAdapter(adapter)
+            }
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al cargar distritos: ${e.message}")
+            }
+    }
+
+    /**
+     * Guarda la universidad seleccionada
+     */
+    private fun saveUniversitySelection(universityName: String) {
+        val userId = auth.currentUser?.uid ?: return
+        editFieldWithAutoCreate(
+            collectionName = "universidad",
+            idFieldName = "ID_UNIVERSIDAD",
+            nameFieldName = "NOMBRE_UNIVERSIDAD",
+            currentName = universityName,
+            textView = actvUniversity, // Ahora recibe AutoCompleteTextView
+            medicoFieldKey = "ID_UNIVERSIDAD"
+        )
+    }
+
+    /**
+     * Guarda el hospital seleccionado
+     */
+    private fun saveHospitalSelection(hospitalName: String) {
+        val currentUser = auth.currentUser ?: return
+        val userId = currentUser.uid
+
+        db.collection("medicos").document(userId).get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO")
+                if (idMedico != null) {
+                    editFieldWithAutoCreateForHospital(
+                        idMedico = idMedico,
+                        currentHospitalId = null,
+                        newHospitalName = hospitalName,
+                        textView = actvHospital
+                    )
+                }
+            }
+    }
+
+    /**
+     * Guarda el distrito seleccionado
+     */
+    private fun saveDistritoSelection(distritoName: String) {
+        val userId = auth.currentUser?.uid ?: return
+        editFieldWithAutoCreate(
+            collectionName = "distrito",
+            idFieldName = "ID_DISTRITO",
+            nameFieldName = "NOMBRE_DISTRITO",
+            currentName = distritoName,
+            textView = actvDistrito, // Ahora recibe AutoCompleteTextView
+            medicoFieldKey = "ID_DISTRITO"
+        )
+    }
+
+    /**
+     * Muestra diálogo para seleccionar/crear universidad con AutoCompleteTextView
+     */
+    private fun showUniversitySelectionDialog() {
+        val currentUser = auth.currentUser ?: return
+        val userId = currentUser.uid
+
+        // Crear un AutoCompleteTextView para el diálogo
+        val actvDialog = AutoCompleteTextView(this)
+        actvDialog.setPadding(50, 30, 50, 30)
+        actvDialog.setText(actvUniversity.text.toString())
+        actvDialog.hint = "Escriba o seleccione una universidad"
+
+        // Cargar sugerencias para el diálogo
+        db.collection("universidad")
+            .get()
+            .addOnSuccessListener { documents ->
+                val universityNames = documents.mapNotNull { it.getString("NOMBRE_UNIVERSIDAD") }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, universityNames)
+                actvDialog.setAdapter(adapter)
+                actvDialog.threshold = 1
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle("Editar Universidad")
+            .setView(actvDialog)
+            .setPositiveButton("Guardar") { _, _ ->
+                val selectedUniversity = actvDialog.text.toString().trim()
+
+                if (selectedUniversity.isEmpty()) {
+                    Toast.makeText(this, "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                saveUniversitySelection(selectedUniversity)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    /**
+     * Muestra diálogo para seleccionar/crear distrito con AutoCompleteTextView
+     */
+    private fun showDistritoSelectionDialog() {
+        val currentUser = auth.currentUser ?: return
+        val userId = currentUser.uid
+
+        // Crear un AutoCompleteTextView para el diálogo
+        val actvDialog = AutoCompleteTextView(this)
+        actvDialog.setPadding(50, 30, 50, 30)
+        actvDialog.setText(actvDistrito.text.toString())
+        actvDialog.hint = "Escriba o seleccione un distrito"
+
+        // Cargar sugerencias para el diálogo
+        db.collection("distrito")
+            .get()
+            .addOnSuccessListener { documents ->
+                val distritoNames = documents.mapNotNull { it.getString("NOMBRE_DISTRITO") }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, distritoNames)
+                actvDialog.setAdapter(adapter)
+                actvDialog.threshold = 1
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle("Editar Distrito")
+            .setView(actvDialog)
+            .setPositiveButton("Guardar") { _, _ ->
+                val selectedDistrito = actvDialog.text.toString().trim()
+
+                if (selectedDistrito.isEmpty()) {
+                    Toast.makeText(this, "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                saveDistritoSelection(selectedDistrito)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+    /**
+     * Muestra diálogo para seleccionar/crear especialidad con AutoCompleteTextView
+     */
+    private fun showSpecialtySelectionDialog() {
+        val currentUser = auth.currentUser ?: return
+        val userId = currentUser.uid
+
+        // Crear un AutoCompleteTextView para el diálogo
+        val actvDialog = AutoCompleteTextView(this)
+        actvDialog.setPadding(50, 30, 50, 30)
+        actvDialog.setText(actvSpecialty.text.toString())
+        actvDialog.hint = "Escriba o seleccione una especialidad"
+
+        // Cargar sugerencias para el diálogo
+        db.collection("especialidad")
+            .get()
+            .addOnSuccessListener { documents ->
+                val specialtyNames = documents.mapNotNull { it.getString("ESPECIALIDAD") }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, specialtyNames)
+                actvDialog.setAdapter(adapter)
+                actvDialog.threshold = 1
+            }
+
+        AlertDialog.Builder(this)
+            .setTitle("Editar Especialidad")
+            .setView(actvDialog)
+            .setPositiveButton("Guardar") { _, _ ->
+                val selectedSpecialty = actvDialog.text.toString().trim()
+
+                if (selectedSpecialty.isEmpty()) {
+                    Toast.makeText(this, "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                saveSpecialtySelection(selectedSpecialty)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    /**
+     * Guarda la especialidad seleccionada
+     */
+    private fun saveSpecialtySelection(specialtyName: String) {
+        val userId = auth.currentUser?.uid ?: return
+        editFieldWithAutoCreate(
+            collectionName = "especialidad",
+            idFieldName = "ID_ESPECIALIDAD",
+            nameFieldName = "ESPECIALIDAD",
+            currentName = specialtyName,
+            textView = actvSpecialty, // Ahora recibe AutoCompleteTextView
+            medicoFieldKey = "ID_ESPECIALIDAD"
+        )
+    }
+
+    /**
+     * Carga sugerencias de especialidades desde Firestore
+     */
+    private fun loadSpecialtySuggestions() {
+        db.collection("especialidad")
+            .get()
+            .addOnSuccessListener { documents ->
+                val specialtyNames = documents.mapNotNull { it.getString("ESPECIALIDAD") }
+                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, specialtyNames)
+                actvSpecialty.setAdapter(adapter)
+            }
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al cargar especialidades: ${e.message}")
+            }
+    }
 }
