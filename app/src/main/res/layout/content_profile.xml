@@ -458,41 +458,6 @@
                     android:src="@drawable/ic_edit" />
             </LinearLayout>
 
-            <!-- 🔹 HORARIOS DE ATENCIÓN (EDITABLE) -->
-            <TextView
-                android:text="Horario de Atención:"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#6200EE"
-                android:layout_marginTop="16dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-            <EditText
-                android:id="@+id/tvHorario"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Horario"
-                android:hint="Agregar horario"
-                android:inputType="text"
-                android:background="@android:color/transparent"
-                android:textSize="18sp"/>
-
-            <!-- Contenedor dinámico para horarios -->
-            <LinearLayout
-                android:id="@+id/llHorariosContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="8dp" />
-
-            <ImageView
-                android:id="@+id/ivAddHorario"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_access_time"
-                android:layout_marginTop="8dp"
-                android:contentDescription="Agregar horario" />
-
             <!-- Contraseña -->
             <TextView
                 android:id="@+id/tvPassword"
@@ -512,6 +477,29 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center" />
+
+
+            <!-- 🔹 DÍA DE LA SEMANA (FILTRO NO EDITABLE) -->
+            <TextView
+                android:text="Filtrar por Día de Atención:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#6200EE"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupDiasFiltro"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                app:chipSpacing="4dp">
+
+                <!-- Los chips se agregarán dinámicamente -->
+            </com.google.android.material.chip.ChipGroup>
 
             <!-- 🔹 FECHAS DE ATENCIÓN (EDITABLE) -->
             <TextView

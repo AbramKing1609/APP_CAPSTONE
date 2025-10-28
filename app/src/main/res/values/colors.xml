@@ -19,4 +19,15 @@
     <color name="calendar_blue">#4A90E2</color>
     <color name="calendar_green">#7ED321</color>
     <color name="calendar_red">#D0021B</color>
+
+
+    <!-- Nuevos colores para los chips del filtro -->
+    <color name="chip_selected_background">#00C9AA</color>
+    <color name="chip_unselected_background">#E0E0E0</color>
+    <color name="chip_selected_text">#FFFFFF</color>
+    <color name="chip_unselected_text">#212121</color>
+
+    <!-- Colores para chips de disponibilidad -->
+    <color name="disponibilidad_chip_color">#E3F2FD</color>
+    <color name="disponibilidad_text_color">#1565C0</color>
 </resources>
