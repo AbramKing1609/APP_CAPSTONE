@@ -1150,7 +1150,6 @@ class ProfileActivity : AppCompatActivity() {
         val currentUser = auth.currentUser ?: return
         val userId = currentUser.uid
 
-        // 🔹 Cargar datos del médico
         db.collection("medicos").document(userId).get()
             .addOnSuccessListener { doc ->
                 if (!doc.exists()) {
@@ -1162,7 +1161,7 @@ class ProfileActivity : AppCompatActivity() {
                 val name = doctorData["NOMBRE"] as? String ?: "N/A"
                 val lastName = doctorData["APELLIDO"] as? String ?: ""
                 val edad = doctorData["EDAD"]?.toString() ?: "N/A"
-                val telefono = doctorData["CONTACTO"] as? String ?: "N/A"
+                val telefono = doctorData["CELULAR"] as? String ?: "N/A"
 
                 val idEspecialidad = doctorData["ID_ESPECIALIDAD"] as? Long
                 val idUniversidad = doctorData["ID_UNIVERSIDAD"] as? Long
@@ -1173,12 +1172,19 @@ class ProfileActivity : AppCompatActivity() {
                 val photoUrl = doctorData["FOTO_PERFIL"] as? String
                 val idMedico = doctorData["ID_MEDICO"] as? Long
 
+                // 🔹 Mostrar datos básicos
+                findViewById<TextView>(R.id.tvProfileName).text = "$name $lastName"
+                findViewById<TextView>(R.id.tvAge).text = "$edad años"
+                findViewById<EditText>(R.id.etContactNumber).setText(telefono)
+                findViewById<TextView>(R.id.tvExperienceYears).text = expAnios
+                findViewById<TextView>(R.id.tvAdditionalInfo).text = additionalInfo
+
                 // 🔹 Cargar disponibilidades completas
                 if (idMedico != null) {
                     loadDisponibilidadesFromFirestore(idMedico)
                 }
 
-                // 🔹 Lógica para cargar la imagen de perfil (sin cambios)
+                // 🔹 Cargar imagen de perfil
                 if (!photoUrl.isNullOrEmpty()) {
                     Glide.with(this)
                         .load(photoUrl)
@@ -1190,13 +1196,85 @@ class ProfileActivity : AppCompatActivity() {
                     ivProfilePicture.setImageResource(R.drawable.ic_profile)
                 }
 
-                // ... (resto del código de carga de datos sin cambios)
+                // 🔹 Cargar nombres asociados a los IDs ------------------------
+
+                // Universidad
+                if (idUniversidad != null) {
+                    db.collection("universidad")
+                        .whereEqualTo("ID_UNIVERSIDAD", idUniversidad)
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener { docs ->
+                            val nombreUniversidad = docs.firstOrNull()?.getString("NOMBRE_UNIVERSIDAD") ?: "N/A"
+                            actvUniversity.setText(nombreUniversidad)
+                        }
+                }
+
+                // Distrito
+                if (idDistrito != null) {
+                    db.collection("distrito")
+                        .whereEqualTo("ID_DISTRITO", idDistrito)
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener { docs ->
+                            val nombreDistrito = docs.firstOrNull()?.getString("NOMBRE_DISTRITO") ?: "N/A"
+                            actvDistrito.setText(nombreDistrito)
+                        }
+                }
+
+                // Especialidad
+                if (idEspecialidad != null) {
+                    db.collection("especialidad")
+                        .whereEqualTo("ID_ESPECIALIDAD", idEspecialidad)
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener { docs ->
+                            val nombreEspecialidad = docs.firstOrNull()?.getString("ESPECIALIDAD") ?: "N/A"
+                            actvSpecialty.setText(nombreEspecialidad)
+                        }
+                }
+
+                // Nacionalidad
+                if (idNacionalidad != null) {
+                    db.collection("nacionalidad")
+                        .whereEqualTo("ID_NACIONALIDAD", idNacionalidad)
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener { docs ->
+                            val nombreNacionalidad = docs.firstOrNull()?.getString("NACIONALIDAD") ?: "N/A"
+                            findViewById<TextView>(R.id.tvNacionalidad).text = nombreNacionalidad
+                        }
+                }
+
+                // Hospital (usa tabla intermedia doctor_hospital)
+                if (idMedico != null) {
+                    db.collection("doctor_hospital")
+                        .whereEqualTo("ID_MEDICO", idMedico)
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener { doctorHospDocs ->
+                            val idHospital = doctorHospDocs.firstOrNull()?.getLong("ID_HOSPITAL")
+                            if (idHospital != null) {
+                                db.collection("hospital")
+                                    .whereEqualTo("ID_HOSPITAL", idHospital)
+                                    .limit(1)
+                                    .get()
+                                    .addOnSuccessListener { hospDocs ->
+                                        val nombreHospital = hospDocs.firstOrNull()?.getString("NOMBRE_HOSPITAL") ?: "N/A"
+                                        actvHospital.setText(nombreHospital)
+                                    }
+                            }
+                        }
+                }
+                // -------------------------------------------------------------
+
             }
             .addOnFailureListener { e ->
                 Log.e("ProfileActivity", "Error al cargar datos del perfil", e)
                 Toast.makeText(this, "Error al cargar datos del perfil.", Toast.LENGTH_SHORT).show()
             }
     }
+
     /**
      * MODIFICADO: Carga las disponibilidades desde Firestore - ORDENA HORARIOS AL CARGAR
      */
