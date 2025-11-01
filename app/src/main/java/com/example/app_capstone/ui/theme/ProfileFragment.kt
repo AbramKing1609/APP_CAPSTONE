@@ -1168,7 +1168,7 @@ class ProfileActivity : AppCompatActivity() {
                 val idDistrito = doctorData["ID_DISTRITO"] as? Long
                 val idNacionalidad = doctorData["ID_NACIONALIDAD"] as? Long
                 val expAnios = doctorData["EXP_ANIOS"]?.toString() ?: "N/A"
-                val additionalInfo = doctorData["INFO_ADIC"] as? String ?: "N/A"
+                val additionalInfo = doctorData["additional_info"] as? String ?: "N/A"
                 val photoUrl = doctorData["FOTO_PERFIL"] as? String
                 val idMedico = doctorData["ID_MEDICO"] as? Long
 
