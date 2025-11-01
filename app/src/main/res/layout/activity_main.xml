@@ -25,30 +25,19 @@
             android:text="Dr_Pe"
             android:textSize="18sp"
             android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold"
             android:textColor="#FFFFFF" />
     </FrameLayout>
 
     <!-- ============================================== -->
     <!-- 2. CONTENIDO PRINCIPAL DINÁMICO (CONTENEDOR) -->
-    <!-- Se cambió el ScrollView por un FrameLayout para albergar el contenido variable (home/settings). -->
-    <!-- Esto soluciona el error "Unresolved reference: main_content_frame". -->
     <!-- ============================================== -->
     <FrameLayout
         android:id="@+id/main_content_frame"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#F5F5F5">
-
-        <!-- NOTA: El contenido de content_home debe ser cargado aquí por la Activity
-             utilizando LayoutInflater, ya que se eliminó el contenido estático anterior. -->
-
-        <!-- Para que el contenido de inicio se muestre automáticamente al cargar,
-             necesitarás el layout content_home.xml.
-             Ya que tu código de Kotlin llama a displayContent(R.layout.content_home)
-             en checkCurrentUserAndShowHome(), el contenido se cargará correctamente. -->
-
-    </FrameLayout>
+        android:background="#F5F5F5" />
 
     <!-- ============================================== -->
     <!-- 3. BARRA DE NAVEGACIÓN INFERIOR (FIJA) -->
@@ -56,29 +45,30 @@
     <LinearLayout
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#1EC8A3"
+        android:layout_height="70dp"
+        android:background="#03DAC5"
         android:orientation="horizontal"
-        android:paddingVertical="8dp">
+        android:paddingVertical="8dp"
+        android:elevation="8dp">
 
         <!-- Botón de Inicio -->
         <LinearLayout
             android:id="@+id/btnHome"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="4dp">
 
-            <!-- Placeholder para ic_home -->
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_home"
-                app:tint="@android:color/white"
+                android:tint="@android:color/white"
                 android:contentDescription="Inicio" />
 
             <TextView
@@ -87,28 +77,29 @@
                 android:layout_marginTop="4dp"
                 android:text="Inicio"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/montserrat_bold" />
         </LinearLayout>
-
 
         <!-- Botón de Notificaciones -->
         <LinearLayout
             android:id="@+id/btnNotifications"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="4dp">
 
-            <!-- Placeholder para ic_notifications -->
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_notifications"
-                app:tint="@android:color/white"
+                android:tint="@android:color/white"
                 android:contentDescription="Notificaciones" />
 
             <TextView
@@ -117,27 +108,29 @@
                 android:layout_marginTop="4dp"
                 android:text="Notificaciones"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/montserrat_bold" />
         </LinearLayout>
 
         <!-- Botón de Pacientes -->
         <LinearLayout
             android:id="@+id/btnPatients"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="4dp">
 
-            <!-- Placeholder para ic_patients -->
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_patients"
-                app:tint="@android:color/white"
+                android:tint="@android:color/white"
                 android:contentDescription="Pacientes" />
 
             <TextView
@@ -146,27 +139,29 @@
                 android:layout_marginTop="4dp"
                 android:text="Pacientes"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/montserrat_bold" />
         </LinearLayout>
 
         <!-- Botón de Calendario -->
         <LinearLayout
             android:id="@+id/btnCalendars"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="4dp">
 
-            <!-- Placeholder para ic_payments -->
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_calendar"
-                app:tint="@android:color/white"
+                android:tint="@android:color/white"
                 android:contentDescription="Calendario" />
 
             <TextView
@@ -175,25 +170,29 @@
                 android:layout_marginTop="4dp"
                 android:text="Calendario"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/montserrat_bold" />
         </LinearLayout>
-        <!-- 🔹 Nuevo botón de Cerrar Sesión dentro del nav -->
+
+        <!-- Botón de Cerrar Sesión -->
         <LinearLayout
             android:id="@+id/btnLogout"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="4dp">
 
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_logout"
-                app:tint="@android:color/white"
+                android:tint="@android:color/white"
                 android:contentDescription="Cerrar Sesión" />
 
             <TextView
@@ -202,10 +201,11 @@
                 android:layout_marginTop="4dp"
                 android:text="Salir"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/montserrat_bold" />
         </LinearLayout>
     </LinearLayout>
-
 
     <!-- ============================================== -->
     <!-- 4. PIE DE PÁGINA INFERIOR VERDE/CIAN (FIJO) -->
@@ -221,8 +221,9 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="Sistema Médico"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold"
             android:textColor="#FFFFFF" />
     </FrameLayout>
 </LinearLayout>
