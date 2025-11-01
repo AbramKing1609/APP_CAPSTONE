@@ -40,8 +40,5 @@
         <!-- Cambia el color principal (de fondo y botones) -->
         <item name="colorPrimary">@color/teal_200</item>
         <item name="colorOnPrimary">@android:color/white</item>
-
-
     </style>
-
 </resources>

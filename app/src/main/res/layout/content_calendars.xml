@@ -19,16 +19,17 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_arrow_back"
-            app:tint="#333333"/>
+            android:tint="#03DAC5"/>
 
         <TextView
             android:id="@+id/tvTitleCalendars"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Calendario"
-            android:textSize="22sp"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:textColor="#333333"
+            android:fontFamily="@font/montserrat_extrabold"
+            android:textColor="#000000"
             android:layout_marginStart="12dp" />
     </LinearLayout>
 
@@ -51,38 +52,36 @@
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="6dp"
-                android:layout_marginBottom="20dp">
-                <!-- Se ha aumentado el radio y la elevación para un efecto más "flotante" -->
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="#FAFAFA">
 
                 <CalendarView
                     android:id="@+id/calendarView"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="8dp"
-
-                    android:dateTextAppearance="@style/TextAppearance.AppCompat.Medium"
-                    android:weekDayTextAppearance="@style/TextAppearance.AppCompat.Small"
-
-                    android:focusedMonthDateColor="#333333"
+                    android:layout_height="400dp"
+                    android:padding="16dp"
+                    android:focusedMonthDateColor="#03DAC5"
+                    android:unfocusedMonthDateColor="#9E9E9E"
                     android:weekSeparatorLineColor="@android:color/transparent"
-
-                    android:selectedWeekBackgroundColor="#E0F7FA"
-                    android:selectedDateVerticalBar="@color/colorPrimary"
-
+                    android:selectedWeekBackgroundColor="#E3F2FD"
                     android:minDate="01/01/2021"
                     android:maxDate="31/12/2025"
                     android:firstDayOfWeek="2"
                     android:showWeekNumber="false" />
             </androidx.cardview.widget.CardView>
+
             <TextView
                 android:id="@+id/tvTitleSchedule"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Cronograma"
-                android:textSize="22sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
-                android:textColor="#333333"
+                android:fontFamily="@font/montserrat_extrabold"
+                android:textColor="#000000"
                 android:layout_marginBottom="16dp" />
+
+
         </LinearLayout>
     </ScrollView>
 </FrameLayout>
