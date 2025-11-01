@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/white">
@@ -8,13 +9,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
-        <!-- Header con Bandera/Iconos - REDISEÑO BASADO EN LA IMAGEN -->
+        android:padding="20dp">
+
+        <!-- Header con Bandera/Iconos - REDISEÑADO -->
         <RelativeLayout
             android:id="@+id/header"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:background="@android:color/transparent">
+            android:layout_height="200dp"
+            android:background="@android:color/transparent"
+            android:layout_marginBottom="16dp">
 
             <!-- Contenedor central para el texto de bienvenida y los iconos de doctor/usuario -->
             <LinearLayout
@@ -30,7 +33,7 @@
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="16dp">
 
                     <!-- Ícono de Perfil (izquierda) -->
                     <ImageButton
@@ -42,9 +45,10 @@
                         android:layout_marginStart="1dp"
                         android:background="@android:color/transparent"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_profile"/>
+                        android:src="@drawable/ic_profile"
+                        android:tint="#03DAC5"/>
 
-                    <!-- Ícono de Ajustes/Megáfono (derecha) - Se asume que el ícono de la imagen es 'Megaphone' o un ícono relacionado (placeholder) -->
+                    <!-- Ícono de Ajustes/Megáfono (derecha) -->
                     <ImageButton
                         android:id="@+id/btnSettings"
                         android:layout_width="48dp"
@@ -54,7 +58,8 @@
                         android:layout_marginEnd="1dp"
                         android:background="@android:color/transparent"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_settings"/>
+                        android:src="@drawable/ic_settings"
+                        android:tint="#03DAC5"/>
 
                     <!-- Texto de Bienvenida (Centro) -->
                     <TextView
@@ -62,18 +67,18 @@
                         android:layout_height="wrap_content"
                         android:layout_centerInParent="true"
                         android:text="¡Bienvenido!"
-                        android:textColor="@color/black"
+                        android:textColor="#000000"
                         android:textSize="32sp"
                         android:textStyle="bold"
-                        android:fontFamily="@font/montserrat_bold" />
+                        android:fontFamily="@font/montserrat_extrabold" />
 
                 </RelativeLayout>
 
-                <!-- Ícono Central de Doctor/a (Reemplaza la bandera de Perú) -->
+                <!-- Ícono Central de Doctor/a -->
                 <ImageView
                     android:id="@+id/imgCentralIcon"
-                    android:layout_width="85dp"
-                    android:layout_height="85dp"
+                    android:layout_width="105dp"
+                    android:layout_height="105dp"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="4dp"
                     android:contentDescription="Icono Central de Doctor/a"
@@ -83,6 +88,7 @@
             </LinearLayout>
 
         </RelativeLayout>
+
         <!-- Sección de Bienvenida -->
         <TextView
             android:id="@+id/tvWelcome"
@@ -91,7 +97,9 @@
             android:text="Hola Doctor/a,"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black" />
+            android:fontFamily="@font/montserrat_extrabold"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/tvDoctorName"
@@ -99,7 +107,9 @@
             android:layout_height="wrap_content"
             android:text="Cargando Nombre..."
             android:textSize="18sp"
-            android:textColor="@android:color/black"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_bold"
+            android:textColor="#424242"
             android:layout_marginBottom="24dp" />
 
         <!-- Tarjeta de pagos -->
@@ -108,22 +118,26 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card_background_1"
-            android:padding="16dp">
+            android:background="@drawable/rounded_card_background_accent"
+            android:padding="20dp"
+            android:gravity="center">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Verifica los pagos realizados por tu aplicación Bancaria accesible"
                 android:textSize="16sp"
-                android:layout_marginBottom="8dp"
-                android:textColor="@android:color/white" />
+                android:textStyle="bold"
+                android:fontFamily="@font/montserrat_bold"
+                android:layout_marginBottom="12dp"
+                android:textColor="@android:color/white"
+                android:gravity="center" />
 
             <ImageView
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_payments" />
+                android:src="@drawable/ic_payments"
+                android:tint="@android:color/white" />
 
         </LinearLayout>
 
@@ -141,22 +155,26 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
                 android:orientation="vertical"
-                android:background="@drawable/rounded_card_background"
-                android:padding="16dp">
+                android:background="@drawable/background_edittext"
+                android:padding="20dp"
+                android:gravity="center">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Las notificaciones les verificarán los nuevos pacientes que tienen"
                     android:textSize="14sp"
-                    android:layout_marginBottom="8dp"
-                    android:textColor="#1EC8A3" />
+                    android:textStyle="bold"
+                    android:fontFamily="@font/montserrat_bold"
+                    android:layout_marginBottom="12dp"
+                    android:textColor="#424242"
+                    android:gravity="center" />
 
                 <ImageView
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_notifications"/>
+                    android:src="@drawable/ic_notifications"
+                    android:tint="#03DAC5"/>
             </LinearLayout>
 
             <!-- Tarjeta de pacientes -->
@@ -166,22 +184,26 @@
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:orientation="vertical"
-                android:background="@drawable/rounded_card_background"
-                android:padding="16dp">
+                android:background="@drawable/background_edittext"
+                android:padding="20dp"
+                android:gravity="center">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Para conversar con los pacientes vaya a la opción pacientes"
                     android:textSize="14sp"
-                    android:layout_marginBottom="8dp"
-                    android:textColor="#1EC8A3" />
+                    android:textStyle="bold"
+                    android:fontFamily="@font/montserrat_bold"
+                    android:layout_marginBottom="12dp"
+                    android:textColor="#424242"
+                    android:gravity="center" />
 
                 <ImageView
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_patients" />
+                    android:src="@drawable/ic_patients"
+                    android:tint="#03DAC5" />
 
             </LinearLayout>
         </LinearLayout>
@@ -191,9 +213,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_card_background_1"
-            android:padding="16dp"
-            android:layout_marginBottom="24dp">
+            android:background="@drawable/rounded_card_background_accent"
+            android:padding="20dp"
+            android:layout_marginBottom="24dp"
+            android:gravity="center">
 
             <TextView
                 android:layout_width="match_parent"
@@ -201,14 +224,16 @@
                 android:text="No olvide de añadir su hora de consulta"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="8dp"
-                android:textColor="@android:color/white" />
+                android:fontFamily="@font/montserrat_bold"
+                android:layout_marginBottom="12dp"
+                android:textColor="@android:color/white"
+                android:gravity="center" />
 
             <ImageView
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_calendar" />
+                android:src="@drawable/ic_calendar"
+                android:tint="@android:color/white" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
