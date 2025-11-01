@@ -502,25 +502,46 @@
             </com.google.android.material.chip.ChipGroup>
 
             <!-- 🔹 FECHAS DE ATENCIÓN (EDITABLE) -->
-            <TextView
-                android:text="Fechas de Atención:"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#6200EE"
-                android:layout_marginTop="16dp"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="16dp"
+                android:paddingBottom="4dp">
 
+                <!-- 🟣 Título -->
+                <TextView
+                    android:text="Fechas de Atención:"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#6200EE"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <!-- 📅 Ícono de calendario (más grande y más abajo visualmente) -->
+                <ImageView
+                    android:id="@+id/ivAddFecha"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:src="@drawable/ic_calendar_today"
+                    android:tint="#00C9AA"
+                    android:contentDescription="Agregar fecha"
+                    android:layout_marginTop="8dp"
+                    android:padding="8dp" />
+            </LinearLayout>
+
+            <!-- Campo editable de texto (sin texto redundante) -->
             <EditText
                 android:id="@+id/tvFechasAtencion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Fechas"
-                android:hint="Agregar Fechas"
+                android:hint="Seleccionar fechas de atención"
                 android:inputType="text"
                 android:background="@android:color/transparent"
-                android:textSize="18sp"/>
-
+                android:textSize="18sp"
+                android:layout_marginTop="-6dp" />
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipGroupFechas"
@@ -530,14 +551,6 @@
                 app:chipSpacing="4dp"
                 app:singleSelection="false"
                 app:singleLine="false" />
-
-            <ImageView
-                android:id="@+id/ivAddFecha"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_calendar_today"
-                android:layout_marginTop="8dp"
-                android:contentDescription="Agregar fecha" />
 
         </LinearLayout>
     </ScrollView>
