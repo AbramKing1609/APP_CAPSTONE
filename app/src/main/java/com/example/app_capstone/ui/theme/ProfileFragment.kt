@@ -1285,16 +1285,27 @@ class ProfileActivity : AppCompatActivity() {
             .whereEqualTo("ID_MEDICO", idMedico)
             .get()
             .addOnSuccessListener { documents ->
-                // 🔹 VERIFICAR SI HAY DOCUMENTOS SIN ID_DISPONIBILIDAD Y MIGRARLOS
+                // 🔹 Verificar si hay documentos sin ID_DISPONIBILIDAD y migrarlos
                 val documentosSinID = documents.documents.filter {
                     it.getLong("ID_DISPONIBILIDAD") == null
                 }
-
                 if (documentosSinID.isNotEmpty()) {
                     migrarIDsDisponibilidad()
                 }
 
-                for (document in documents) {
+                // 🔹 ORDENAR LAS FECHAS (más reciente primero)
+                val sortedDocs = documents.sortedByDescending { doc ->
+                    val fechaStr = doc.getString("FECHA")
+                    try {
+                        val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
+                        sdf.parse(fechaStr)?.time ?: 0L
+                    } catch (e: Exception) {
+                        0L
+                    }
+                }
+
+                // 🔹 Recorrer las fechas ya ordenadas
+                for (document in sortedDocs.reversed()) {
                     val fecha = document.getString("FECHA")
                     val horarios = document.get("HORA")
                     val idDisponibilidad = document.getLong("ID_DISPONIBILIDAD")
@@ -1303,7 +1314,7 @@ class ProfileActivity : AppCompatActivity() {
                     if (fecha != null && horarios != null) {
                         when (horarios) {
                             is List<*> -> {
-                                // Nueva estructura: array de horarios - ORDENAR AL CARGAR
+                                // Nueva estructura: array de horarios — ordenamos los horarios dentro
                                 val listaHorarios = horarios.filterIsInstance<String>()
                                 val horariosOrdenados = ordenarHorarios(listaHorarios)
                                 agregarDisponibilidadUI(fecha, horariosOrdenados, docId, idDisponibilidad)
@@ -1321,6 +1332,7 @@ class ProfileActivity : AppCompatActivity() {
                 Log.e("ProfileActivity", "Error al cargar disponibilidades", e)
             }
     }
+
 
     /**
      * MODIFICADO: Obtiene el día de la semana a partir de una fecha en formato YYYY/MM/DD
