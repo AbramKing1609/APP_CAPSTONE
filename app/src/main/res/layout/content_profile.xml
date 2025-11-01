@@ -469,9 +469,9 @@
 
             <Button
                 android:id="@+id/btnChangePassword"
-                android:text="🔴 Cambiar Contraseña"
+                android:text="🔑 Cambiar Contraseña"
                 android:textSize="16sp"
-                android:backgroundTint="#B71C1C"
+                android:backgroundTint="#00D9BB"
                 android:textColor="#FFFFFF"
                 android:layout_marginTop="8dp"
                 android:layout_width="wrap_content"
