@@ -13,7 +13,7 @@ class SplashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_splash) // 👈 Mostrar el layout
+        setContentView(R.layout.activity_splash) // 👈 Muestra tu layout del splash
 
         // 🔹 Animación simple de aparición
         val logo = findViewById<ImageView>(R.id.logoImage)
@@ -21,19 +21,19 @@ class SplashActivity : AppCompatActivity() {
         fadeIn.duration = 1500
         logo.startAnimation(fadeIn)
 
-        // 🔹 Verificar si hay sesión activa en Firebase
+        // 🔹 Verificar sesión activa en Firebase
         val auth = FirebaseAuth.getInstance()
         val currentUser = auth.currentUser
 
         Handler(Looper.getMainLooper()).postDelayed({
             if (currentUser != null) {
-                // Usuario ya autenticado → MainActivity
+                // ✅ Usuario autenticado → ir al dashboard principal
                 startActivity(Intent(this, MainActivity::class.java))
             } else {
-                // No hay sesión → LoginActivity
-                startActivity(Intent(this, LoginActivity::class.java))
+                // ✅ Sin sesión → ir al menú principal con “Ingresar” y “Registrarme”
+                startActivity(Intent(this, MainAppActivity::class.java))
             }
             finish()
-        }, 1800) // 1.8 segundos
+        }, 1800) // ⏳ Espera 1.8 segundos
     }
 }

@@ -31,6 +31,11 @@
             </intent-filter>
         </activity>
 
+        <!-- 🏠 Nueva pantalla principal (main_app.xml) -->
+        <activity
+            android:name=".MainAppActivity"
+            android:exported="false" />
+
         <!-- 🔹 Pantalla de login -->
         <activity
             android:name=".LoginActivity"

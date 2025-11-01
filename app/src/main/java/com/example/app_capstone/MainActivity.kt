@@ -439,16 +439,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLogoutDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Cerrar sesión")
-            .setMessage("¿Estás seguro de que deseas cerrar sesión?")
-            .setPositiveButton("Sí") { _: DialogInterface, _: Int ->
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Cerrar sesión")
+            .setMessage("¿Está seguro que desea cerrar sesión?")
+            .setPositiveButton("Sí") { dialog, _ ->
+                // Cerrar sesión de Firebase
                 auth.signOut()
-                goToLogin()
+
+                // Ir a la actividad MainApp (login o inicio)
+                val intent = Intent(this, MainAppActivity::class.java) // Cambia MainAppActivity por el nombre real de tu actividad
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                finish() // Asegura que MainActivity se cierre
+                dialog.dismiss()
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton("Cancelar") { dialog, _ ->
+                dialog.dismiss()
+            }
             .show()
     }
+
 
     private fun goToLogin() {
         val intent = Intent(this, LoginActivity::class.java)
