@@ -400,7 +400,7 @@ class ProfileActivity : AppCompatActivity() {
                     return@addOnSuccessListener
                 }
 
-                val builder = MaterialDatePicker.Builder.dateRangePicker().setTitleText("Seleccionar fechas de atención")
+                val builder = MaterialDatePicker.Builder.dateRangePicker().setTitleText("Seleccionar fechas de atención").setTheme(R.style.CustomMaterialDatePickerTheme)
                 val picker = builder.build()
                 picker.show(supportFragmentManager, picker.toString())
                 picker.addOnPositiveButtonClickListener { selection ->

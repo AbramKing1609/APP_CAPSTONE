@@ -35,4 +35,13 @@
         <item name="android:paddingTop">4dp</item>
         <item name="android:paddingBottom">8dp</item>
     </style>
+
+    <style name="CustomMaterialDatePickerTheme" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
+        <!-- Cambia el color principal (de fondo y botones) -->
+        <item name="colorPrimary">@color/teal_200</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+
+
+    </style>
+
 </resources>
