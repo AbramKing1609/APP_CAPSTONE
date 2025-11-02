@@ -188,20 +188,30 @@ class ProfileActivity : AppCompatActivity() {
                 val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(user.email!!, currentPass)
                 user.reauthenticate(credential)
                     .addOnSuccessListener {
+                        // Paso 1: Reautenticación exitosa. Procede a cambiar la contraseña en Firebase Auth.
                         user.updatePassword(newPass)
                             .addOnSuccessListener {
+                                // Paso 2: Cambio de contraseña en Firebase Auth exitoso.
+
+                                // ✅ LLAMADA A FIRESTORE: Sincroniza la BD.
+                                // ¡Esto solo se ejecuta si Firebase Auth tuvo éxito!
+                                updateFirestorePassword(newPass)
+
                                 Toast.makeText(this, "Contraseña actualizada correctamente", Toast.LENGTH_LONG).show()
-                                dialog.dismiss() // 🔹 Cerramos solo si todo salió bien
+                                dialog.dismiss() // 🔹 Cerramos el diálogo solo al éxito final
                             }
                             .addOnFailureListener { e ->
+                                // Paso 3: Fallo al cambiar la contraseña en Firebase Auth (ej: política de seguridad).
                                 Toast.makeText(this, "Error al actualizar la contraseña: ${e.message}", Toast.LENGTH_LONG).show()
                             }
                     }
                     .addOnFailureListener {
-                        etCurrent.error = "Contraseña actual incorrecta" // 🔹 Mostramos el error en el mismo campo
+                        // Paso 4: Fallo en la reautenticación (Contraseña actual incorrecta).
+                        etCurrent.error = "Contraseña actual incorrecta"
                     }
             }
         }
+
 
         val ivBack = findViewById<ImageView>(R.id.ivBack)
         val ivInfo = findViewById<ImageView>(R.id.ivInfo)
@@ -2116,6 +2126,43 @@ class ProfileActivity : AppCompatActivity() {
             }
             .addOnFailureListener { e ->
                 Log.e("ProfileActivity", "Error al cargar especialidades: ${e.message}")
+            }
+    }
+
+    /**
+     * NUEVO: Busca el documento en 'usuario' por correo y actualiza la contraseña.
+     * Nota: Se actualizan ambos campos (CONTRASEÑA y PASSWORD) para máxima compatibilidad
+     * con tu esquema.
+     */
+    private fun updateFirestorePassword(newPassword: String) {
+        // 1. Obtener el usuario autenticado (ya reautenticado y con la contraseña cambiada)
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) {
+            Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val firebaseUid = user.uid
+        // Asegúrate de que 'db' es una instancia válida de FirebaseFirestore.getInstance()
+        val db = FirebaseFirestore.getInstance()
+
+        // 2. ACCESO DIRECTO: Referencia al documento usando el UID como ID del documento
+        val usuarioDocRef = db.collection("usuario").document(firebaseUid)
+
+        // 3. Definir las actualizaciones
+        // ⚠️ CRÍTICO: El campo debe coincidir exactamente con "CONTRASEÑA"
+        val updates = hashMapOf<String, Any>(
+            "CONTRASEÑA" to newPassword
+        )
+
+        // 4. Ejecutar la actualización
+        usuarioDocRef.update(updates)
+            .addOnSuccessListener {
+                Log.d("ProfileActivity", "Contraseña en Firestore actualizada correctamente usando UID.")
+            }
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al actualizar contraseña en Firestore: ${e.message}", e)
+                Toast.makeText(this, "Advertencia: Error al sincronizar contraseña con la base de datos.", Toast.LENGTH_LONG).show()
             }
     }
 }
