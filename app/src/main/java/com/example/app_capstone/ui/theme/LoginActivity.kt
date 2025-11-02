@@ -44,6 +44,9 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         tvGoRegister = findViewById(R.id.tvGoRegister)
 
+        // ✅ AGREGAR ESTA LÍNEA - Inicializar y configurar el texto de "Olvidé mi contraseña"
+        val tvOlvideMiContrasena = findViewById<TextView>(R.id.tvOlvideMiContrasena)
+
         // Inicializar la instancia de Firebase Auth y Firestore
         auth = FirebaseAuth.getInstance()
         db = FirebaseFirestore.getInstance()
@@ -54,6 +57,11 @@ class LoginActivity : AppCompatActivity() {
 
         tvGoRegister.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
+        }
+
+        // ✅ AGREGAR ESTE LISTENER - Para "Olvidé mi contraseña"
+        tvOlvideMiContrasena.setOnClickListener {
+            startActivity(Intent(this, RecuperarCuentaActivity::class.java))
         }
     }
 

@@ -167,6 +167,19 @@
                     android:textStyle="bold"
                     android:padding="12dp"
                     android:fontFamily="@font/montserrat_bold"/>
+
+                <TextView
+                    android:id="@+id/tvOlvideMiContrasena"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Olvide mi contraseña"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:textColor="#03DAC5"
+                    android:textStyle="bold"
+                    android:padding="12dp"
+                    android:fontFamily="@font/montserrat_bold"/>
+
             </LinearLayout>
         </RelativeLayout>
     </ScrollView>

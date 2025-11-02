@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:background="#F5F5F5">
+
+    <FrameLayout
+        android:id="@+id/fixedTopHeader"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="#20CCA9"
+        android:paddingTop="10dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Dr_Pe"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold"
+            android:textColor="#FFFFFF" />
+    </FrameLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:background="@android:color/white"
+        android:padding="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_seguridad_cuenta"
+                android:contentDescription="@string/app_name"
+                android:layout_marginBottom="40dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Crea tu nueva contraseña"
+                android:textSize="28sp"
+                android:textStyle="normal"
+                android:textColor="#000000"
+                android:fontFamily="@font/montserrat_extrabold"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Escribe una contraseña nueva para su cuenta"
+                android:textSize="16sp"
+                android:textColor="#555555"
+                android:gravity="center"
+                android:layout_marginBottom="40dp"
+                android:lineSpacingExtra="4dp"/>
+
+            <EditText
+                android:id="@+id/etCrearContraseña"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:background="@drawable/background_edittext"
+                android:hint="Contraseña nueva"
+                android:inputType="textPassword"
+                android:textSize="16sp"
+                android:textColorHint="#AAAAAA"
+                android:textColor="#000000"
+                android:layout_marginBottom="20dp"/>
+
+            <EditText
+                android:id="@+id/etConfirmarContraseñaNueva"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:background="@drawable/background_edittext"
+                android:hint="Confirmar contraseña"
+                android:inputType="textPassword"
+                android:textSize="16sp"
+                android:textColorHint="#AAAAAA"
+                android:textColor="#000000"
+                android:layout_marginBottom="40dp"/>
+            <Button
+                android:id="@+id/btnEnviar"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="Crear"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/montserrat_extrabold"
+                android:backgroundTint="#20CCA9"
+                android:stateListAnimator="@null"
+                android:layout_marginBottom="24dp"/>
+        </LinearLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/fixedBottomFooter"
+        android:layout_width="match_parent"
+        android:layout_height="35dp"
+        android:background="#20CCA9">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Sistema Médico"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold"
+            android:textColor="#FFFFFF" />
+    </FrameLayout>
+</LinearLayout>

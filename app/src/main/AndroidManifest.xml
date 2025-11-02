@@ -4,6 +4,7 @@
 
     <!-- Permiso para acceder a fotos en Android 13 (API 33) y superior -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
 
     <application
@@ -53,6 +54,8 @@
 
         <activity android:name=".ProfileActivity" />
 
-
+        <activity android:name=".RecuperarCuentaActivity" />
+        <activity android:name=".VerificarCodigoActivity" />
+        <activity android:name=".NuevaContrasenaActivity" />
     </application>
 </manifest>
