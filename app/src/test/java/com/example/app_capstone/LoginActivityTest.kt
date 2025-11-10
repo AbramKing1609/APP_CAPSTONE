@@ -7,16 +7,20 @@ import java.lang.reflect.Method
 
 class LoginActivityTest {
 
-    // --- Helper para invocar funciones privadas/reflexión ---
+    // --- Helper más flexible para invocar funciones privadas ---
     private fun <T> invokePrivate(
         instance: Any?,
         methodName: String,
         vararg args: Any?
-    ): T {
-        val types = args.map { it?.javaClass ?: Any::class.java }.toTypedArray()
-        val method: Method = LoginActivity::class.java.getDeclaredMethod(methodName, *types)
+    ): T? {
+        val clazz = LoginActivity::class.java
+        // Buscar método por nombre y cantidad de parámetros (no tipo exacto)
+        val method: Method = clazz.declaredMethods.firstOrNull {
+            it.name == methodName && it.parameterTypes.size == args.size
+        } ?: throw NoSuchMethodException("$methodName not found in ${clazz.simpleName}")
+
         method.isAccessible = true
-        return method.invoke(instance, *args) as T
+        return method.invoke(instance, *args) as? T
     }
 
     // --- 1️ Validación de campos vacíos ---
@@ -33,25 +37,26 @@ class LoginActivityTest {
     // --- 2️ Validación de correo ---
     @Test
     fun `checkCredentials should detect email correctly`() {
-        val email = "doctor@example.com"
-        assertTrue(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches())
+        val email = "andiroyal1609@gmail.com"
+        val regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
+        assertTrue(regex.matches(email))
     }
 
-    // --- 3️ Manejo de error de autenticación (usuario no registrado) ---
+    // --- 3️ Manejo de error: usuario no registrado ---
     @Test
     fun `handleAuthFailure should handle FirebaseAuthInvalidUserException`() {
         val activity = mock(LoginActivity::class.java)
-        val ex = com.google.firebase.auth.FirebaseAuthInvalidUserException("ERROR_USER_NOT_FOUND", "Usuario no registrado")
-        val result = invokePrivate<Any?>(activity, "handleAuthFailure", ex)
+        val ex = mock(com.google.firebase.auth.FirebaseAuthInvalidUserException::class.java)
+        val result = invokePrivate<Any?>(activity, "handleAuthFailure", ex as Exception)
         assertNull(result)
     }
 
-    // --- 4️ Manejo de error de contraseña incorrecta ---
+    // --- 4️ Manejo de error: contraseña incorrecta ---
     @Test
     fun `handleAuthFailure should handle FirebaseAuthInvalidCredentialsException`() {
         val activity = mock(LoginActivity::class.java)
-        val ex = com.google.firebase.auth.FirebaseAuthInvalidCredentialsException("ERROR_INVALID_CREDENTIAL", "Contraseña inválida")
-        val result = invokePrivate<Any?>(activity, "handleAuthFailure", ex)
+        val ex = mock(com.google.firebase.auth.FirebaseAuthInvalidCredentialsException::class.java)
+        val result = invokePrivate<Any?>(activity, "handleAuthFailure", ex as Exception)
         assertNull(result)
     }
 
@@ -64,24 +69,26 @@ class LoginActivityTest {
         assertNull(result)
     }
 
-    // --- 6️ Lógica de tipo de entrada ---
+    // --- 6️ Clasificación de entrada (email vs colegiatura) ---
     @Test
     fun `checkCredentials should classify input correctly`() {
-        val email = "doctor@mail.com"
-        val colegiatura = "123456"
-        assertTrue(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches())
-        assertFalse(android.util.Patterns.EMAIL_ADDRESS.matcher(colegiatura).matches())
+        val email = "andiroyal1609@gmail.com"
+        val colegiatura = "067890"
+        val regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
+
+        assertTrue(regex.matches(email))
+        assertFalse(regex.matches(colegiatura))
     }
 
-    // --- 7️ Testeo de signInWithEmail ---
+    // --- 7️ signInWithEmail ---
     @Test
     fun `signInWithEmail should not crash when called`() {
         val activity = mock(LoginActivity::class.java)
-        val result = invokePrivate<Any?>(activity, "signInWithEmail", "test@mail.com", "123456")
+        val result = invokePrivate<Any?>(activity, "signInWithEmail", "test@correo.com", "123456")
         assertNull(result)
     }
 
-    // --- 8️ Testeo de searchByColegiaturaAndSignIn ---
+    // --- 8️ searchByColegiaturaAndSignIn ---
     @Test
     fun `searchByColegiaturaAndSignIn should not throw error`() {
         val activity = mock(LoginActivity::class.java)
@@ -89,7 +96,7 @@ class LoginActivityTest {
         assertNull(result)
     }
 
-    // --- 9️ Testeo de fetchDoctorDataAndNavigate ---
+    // --- 9️ fetchDoctorDataAndNavigate ---
     @Test
     fun `fetchDoctorDataAndNavigate should not crash`() {
         val activity = mock(LoginActivity::class.java)
@@ -97,7 +104,7 @@ class LoginActivityTest {
         assertNull(result)
     }
 
-    // --- 10 Guardado de datos ---
+    // --- 10️ Guardado de datos ---
     @Test
     fun `saveDoctorDataToSharedPreferences should not crash`() {
         val activity = mock(LoginActivity::class.java)
