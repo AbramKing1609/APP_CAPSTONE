@@ -106,5 +106,4 @@ dependencies {
 // --- Robolectric para pruebas locales ---
     testImplementation("org.robolectric:robolectric:4.13")
     testRuntimeOnly("org.robolectric:robolectric:4.13")
-
 }
