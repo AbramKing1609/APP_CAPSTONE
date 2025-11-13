@@ -1,5 +1,6 @@
 package com.example.app_capstone
 
+import android.app.DatePickerDialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
@@ -22,12 +23,22 @@ import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import android.graphics.Color
+import android.graphics.Typeface
+import android.net.Uri
 import android.util.Log
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView // Agregar esta importación
+import com.example.app_capstone.ui.ChatRoom.ChatRoomFragment
+import com.google.firebase.firestore.DocumentChange
+import com.google.firebase.firestore.QuerySnapshot
+import java.lang.reflect.Array.set
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 // Clase de datos genérica para listas (Notificaciones/Pacientes)
 data class ItemData(val name: String, val type: String)
@@ -47,6 +58,9 @@ class MainActivity : AppCompatActivity() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private var estadoFiltroActual = "Todos" // Estado por defecto
+    // 🔹 VARIABLE GLOBAL para controlar qué se muestra
+    private var mostrandoHistorial = false
+    private var fechaFiltroHistorial: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +70,10 @@ class MainActivity : AppCompatActivity() {
         setupNavigation()
         setupLogoutButton()
         checkCurrentUserAndShowHome()
+
+        // 🔹 VERIFICAR que esto se esté ejecutando
+        Log.d("MainActivity", "onCreate - Configurando listener de citas")
+        configurarListenerCitas()
     }
 
     private fun initViews() {
@@ -240,18 +258,42 @@ class MainActivity : AppCompatActivity() {
                 // 1. Obtener contenedores
                 val searchBar = newLayout.findViewById<EditText>(R.id.etSearchNotifications)
                 val container = newLayout.findViewById<LinearLayout>(R.id.containerNotifications)
+                val btnHistory = newLayout.findViewById<ImageButton>(R.id.btnHistory)
+                val btnBack = newLayout.findViewById<ImageView>(R.id.btnBack)
 
-                // 2. Cargar notificaciones reales desde Firebase
-                cargarNotificacionesReales(container, searchBar)
+                // 2. Configurar botón de historial
+                btnHistory?.setOnClickListener {
+                    mostrarDialogoHistorialNotificaciones(container, searchBar)
+                }
+
+                // 3. Configurar botón de volver
+                btnBack?.setOnClickListener {
+                    loadHomeContent()
+                }
+
+                // 4. Cargar notificaciones del día actual por defecto
+                cargarNotificacionesDelDia(container, searchBar)
             }
 
             R.layout.content_patients -> {
                 // 1. Obtener contenedores
                 val searchBar = newLayout.findViewById<EditText>(R.id.etSearchPatients)
                 val container = newLayout.findViewById<LinearLayout>(R.id.containerPatients)
+                val btnHistoryPatients = newLayout.findViewById<ImageButton>(R.id.btnHistoryPatients)
+                val btnBack = newLayout.findViewById<ImageView>(R.id.btnBack)
 
-                // 2. Cargar pacientes reales desde Firebase
-                cargarPacientesReales(container, searchBar)
+                // 2. Configurar botón de historial de pacientes
+                btnHistoryPatients?.setOnClickListener {
+                    mostrarDialogoHistorialPacientesCompletados(container, searchBar)
+                }
+
+                // 3. Configurar botón de volver
+                btnBack?.setOnClickListener {
+                    loadHomeContent()
+                }
+
+                // 4. Cargar pacientes activos (no completados)
+                cargarPacientesActivos(container, searchBar)
             }
 
             R.layout.content_calendars -> {
@@ -300,6 +342,420 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Crea una notificación automáticamente cuando se agenda una cita
+     */
+    private fun crearNotificacionCita(cita: CitaReal, paciente: PacienteReal, tipo: String) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            Log.e("MainActivity", "Usuario no autenticado al crear notificación")
+            return
+        }
+
+        // Obtener ID_MEDICO del usuario actual
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) {
+                    Log.e("MainActivity", "ID_MEDICO es 0 al crear notificación")
+                    return@addOnSuccessListener
+                }
+
+                // 🔹 OBTENER FECHA ACTUAL PARA MOSTRAR EN LA NOTIFICACIÓN
+                val fechaSolicitud = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+
+                // 🔹 TÍTULOS Y MENSAJES MEJORADOS CON FECHA DE SOLICITUD
+                val (titulo, mensaje) = when (tipo) {
+                    "nueva_cita" -> Pair(
+                        "📋 Nueva Cita Solicitada - $fechaSolicitud",
+                        "El paciente ${paciente.NOMBRE} ${paciente.APELLIDO} ha solicitado una nueva cita para el ${formatearFecha(cita.FECHA)} a las ${cita.HORA.substring(0, 5)}\n\n📅 Solicitado el: $fechaSolicitud"
+                    )
+                    "cita_pendiente" -> Pair(
+                        "⏳ Cita Pendiente",
+                        "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} está pendiente de confirmación para el ${formatearFecha(cita.FECHA)}"
+                    )
+                    "cita_reservada" -> Pair(
+                        "✅ Cita Confirmada",
+                        "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} ha sido confirmada para el ${formatearFecha(cita.FECHA)} a las ${cita.HORA.substring(0, 5)}"
+                    )
+                    "cita_cancelada" -> Pair(
+                        "❌ Cita Cancelada",
+                        "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} programada para el ${formatearFecha(cita.FECHA)} ha sido cancelada"
+                    )
+                    "cita_completada" -> Pair(
+                        "🏁 Cita Completada",
+                        "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} ha sido completada exitosamente"
+                    )
+                    else -> Pair(
+                        "📝 Actualización de Cita",
+                        "Actualización en la cita del paciente ${paciente.NOMBRE} ${paciente.APELLIDO}"
+                    )
+                }
+
+                val notificacionData = hashMapOf(
+                    "ID_NOTIFICACIONES" to System.currentTimeMillis(),
+                    "TITULO" to titulo,
+                    "MENSAJE" to mensaje,
+                    "FECHA_ENVIO" to com.google.firebase.Timestamp.now(),
+                    "ID_PACIENTE" to cita.ID_PACIENTE,
+                    "ID_MEDICO" to idMedico,
+                    "FECHA_SOLICITUD" to fechaSolicitud // 🔹 GUARDAR FECHA DE SOLICITUD
+                )
+
+                Log.d("MainActivity", "Creando notificación: $titulo")
+
+                // Guardar en Firebase
+                db.collection("notificaciones")
+                    .add(notificacionData)
+                    .addOnSuccessListener {
+                        Log.d("MainActivity", "✅ Notificación creada exitosamente: $titulo")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("MainActivity", "❌ Error al crear notificación: ${e.message}")
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error al obtener médico: ${e.message}")
+            }
+    }
+
+    /**
+     * Valida si un paciente ya tiene una cita con el mismo médico en la misma fecha
+     * RETORNA: true si ya existe una cita (y cuál es la cita existente), false si no existe
+     */
+    private fun validarCitaDuplicada(idPaciente: Long, fechaCita: String, callback: (Boolean, String?) -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            callback(false, null)
+            return
+        }
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) {
+                    callback(false, null)
+                    return@addOnSuccessListener
+                }
+
+                // Buscar citas del mismo paciente con el mismo médico en la misma fecha
+                db.collection("cita")
+                    .whereEqualTo("ID_PACIENTE", idPaciente)
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereEqualTo("FECHA", fechaCita)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        if (documents.isEmpty) {
+                            // No hay citas duplicadas
+                            callback(false, null)
+                        } else {
+                            // Hay citas existentes - obtener la primera (debería haber solo una)
+                            val citaExistente = documents.documents.first()
+                            val idCitaExistente = citaExistente.id
+                            Log.d("MainActivity", "Cita duplicada encontrada: $idCitaExistente")
+                            callback(true, idCitaExistente)
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("MainActivity", "Error al validar cita duplicada: ${e.message}")
+                        callback(false, null)
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error al obtener médico para validación: ${e.message}")
+                callback(false, null)
+            }
+    }
+    /**
+     * Valida si un paciente ya tiene una cita solicitada HOY con el mismo médico
+     */
+    private fun validarCitaHoy(idPaciente: Long, callback: (Boolean) -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            callback(false)
+            return
+        }
+
+        val fechaHoy = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) {
+                    callback(false)
+                    return@addOnSuccessListener
+                }
+
+                // 🔹 CORRECCIÓN: Buscar por parte del título que contiene la fecha
+                db.collection("notificaciones")
+                    .whereEqualTo("ID_PACIENTE", idPaciente)
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereEqualTo("TITULO", "📋 Nueva Cita Solicitada - $fechaHoy")
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        val yaSolicitoHoy = !documents.isEmpty
+                        Log.d("MainActivity", "Validación cita hoy - Paciente: $idPaciente, Ya solicitó hoy: $yaSolicitoHoy")
+                        callback(yaSolicitoHoy)
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("MainActivity", "Error al validar cita hoy: ${e.message}")
+                        callback(false)
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error al obtener médico para validación hoy: ${e.message}")
+                callback(false)
+            }
+    }
+
+    /**
+     * Escucha cambios en las citas en tiempo real y genera notificaciones
+     */
+    private fun configurarListenerCitas() {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            Log.e("MainActivity", "Usuario no autenticado")
+            return
+        }
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                Log.d("MainActivity", "Configurando listener para médico ID: $idMedico")
+
+                if (idMedico == 0L) {
+                    Log.e("MainActivity", "ID_MEDICO es 0")
+                    return@addOnSuccessListener
+                }
+
+                // 🔹 VARIABLE PARA RASTREAR ESTADOS ANTERIORES
+                val estadosAnteriores = mutableMapOf<String, String>()
+
+                // Listener en tiempo real para citas de este médico
+                db.collection("cita")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .addSnapshotListener { snapshots, error ->
+                        if (error != null) {
+                            Log.e("MainActivity", "Error en listener de citas: ${error.message}")
+                            return@addSnapshotListener
+                        }
+
+                        Log.d("MainActivity", "Listener activado - Cambios: ${snapshots?.documentChanges?.size}")
+
+                        snapshots?.documentChanges?.forEach { change ->
+                            val documentId = change.document.id
+                            val estadoActual = change.document.getString("ESTADO") ?: ""
+
+                            Log.d("MainActivity", "Tipo de cambio: ${change.type}, Estado actual: $estadoActual, Documento: $documentId")
+
+                            when (change.type) {
+                                DocumentChange.Type.ADDED -> {
+                                    val cita = change.document.toObject(CitaReal::class.java)
+                                    val documentId = change.document.id
+
+                                    Log.d("MainActivity", "Nueva cita agregada: ${cita.ESTADO}, ID: $documentId, Paciente: ${cita.ID_PACIENTE}, Fecha: ${cita.FECHA}")
+
+                                    // Validar cita duplicada en la misma fecha
+                                    validarCitaDuplicada(cita.ID_PACIENTE, cita.FECHA) { tieneDuplicada, idCitaExistente ->
+                                        if (tieneDuplicada && idCitaExistente != null) {
+                                            Log.w("MainActivity", "❌ Paciente ya tiene cita en esta fecha - ID existente: $idCitaExistente")
+
+                                            // 🔹 CORRECCIÓN IMPORTANTE: Solo eliminar la NUEVA cita si ya existe una
+                                            if (idCitaExistente != documentId) {
+                                                Log.w("MainActivity", "Eliminando cita duplicada: $documentId")
+
+                                                // Eliminar la cita duplicada (la nueva)
+                                                db.collection("cita").document(documentId).delete()
+                                                    .addOnSuccessListener {
+                                                        Log.d("MainActivity", "Cita duplicada eliminada: $documentId")
+                                                        // Mostrar notificación de cita duplicada
+                                                        obtenerPacienteYCrearNotificacion(cita, "cita_duplicada")
+                                                    }
+                                                    .addOnFailureListener { e ->
+                                                        Log.e("MainActivity", "Error al eliminar cita duplicada: ${e.message}")
+                                                    }
+                                            } else {
+                                                Log.d("MainActivity", "La cita existente es la misma que la nueva, no se elimina")
+                                            }
+                                        } else {
+                                            // Validar límite de 1 cita por día
+                                            validarCitaHoy(cita.ID_PACIENTE) { yaSolicitoHoy ->
+                                                if (yaSolicitoHoy) {
+                                                    Log.w("MainActivity", "❌ Paciente ya solicitó cita hoy - Eliminando cita")
+
+                                                    // Eliminar la cita que excede el límite
+                                                    db.collection("cita").document(documentId).delete()
+                                                        .addOnSuccessListener {
+                                                            Log.d("MainActivity", "Cita excedente eliminada")
+                                                            // Obtener datos del paciente para mostrar alerta
+                                                            db.collection("pacientes")
+                                                                .whereEqualTo("ID_PACIENTE", cita.ID_PACIENTE)
+                                                                .get()
+                                                                .addOnSuccessListener { pacientes ->
+                                                                    if (!pacientes.isEmpty) {
+                                                                        val pacienteDoc = pacientes.documents.first()
+                                                                        val paciente = PacienteReal(
+                                                                            ID_PACIENTE = pacienteDoc.getLong("ID_PACIENTE") ?: 0L,
+                                                                            NOMBRE = pacienteDoc.getString("NOMBRE") ?: "",
+                                                                            APELLIDO = pacienteDoc.getString("APELLIDO") ?: "",
+                                                                            CORREO = pacienteDoc.getString("CORREO") ?: "",
+                                                                            CELULAR = getSafeString(pacienteDoc, "CELULAR"),
+                                                                            DNI = pacienteDoc.getString("DNI") ?: "",
+                                                                            EDAD = 0,
+                                                                            SEXO = pacienteDoc.getString("SEXO") ?: ""
+                                                                        )
+                                                                        mostrarAlertaLimiteCitas(paciente)
+                                                                    }
+                                                                }
+                                                        }
+                                                } else {
+                                                    // ✅ Validaciones pasadas - Crear notificación normal
+                                                    obtenerPacienteYCrearNotificacion(cita, "nueva_cita")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                DocumentChange.Type.MODIFIED -> {
+                                    // Cita modificada (cambio de estado) - NOTIFICAR SIEMPRE
+                                    val cita = change.document.toObject(CitaReal::class.java)
+                                    val estadoNuevo = cita.ESTADO.toLowerCase()
+
+                                    Log.d("MainActivity", "Cita modificada - Nuevo estado: $estadoNuevo")
+
+                                    when (estadoNuevo) {
+                                        "pendiente" -> {
+                                            Log.d("MainActivity", "Creando notificación de cita pendiente")
+                                            obtenerPacienteYCrearNotificacion(cita, "cita_pendiente")
+                                        }
+                                        "reservada", "confirmada" -> {
+                                            Log.d("MainActivity", "Creando notificación de cita reservada/confirmada")
+                                            obtenerPacienteYCrearNotificacion(cita, "cita_reservada")
+                                        }
+                                        "cancelada" -> {
+                                            Log.d("MainActivity", "Creando notificación de cita cancelada")
+                                            obtenerPacienteYCrearNotificacion(cita, "cita_cancelada")
+                                        }
+                                        "completada" -> {
+                                            Log.d("MainActivity", "Creando notificación de cita completada")
+                                            obtenerPacienteYCrearNotificacion(cita, "cita_completada")
+                                        }
+                                        else -> {
+                                            Log.d("MainActivity", "Cambio de estado no manejado: $estadoNuevo")
+                                        }
+                                    }
+                                }
+
+                                DocumentChange.Type.REMOVED -> {
+                                    Log.d("MainActivity", "Cita eliminada: $documentId")
+                                    estadosAnteriores.remove(documentId)
+                                }
+                            }
+                        }
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error al obtener médico para listener: ${e.message}")
+            }
+    }
+    /**
+     * 🔹 FUNCIÓN TEMPORAL: Verificar el estado de las citas en Firebase
+     */
+    private fun verificarEstadoCitas() {
+        val currentUser = auth.currentUser
+        if (currentUser == null) return
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+
+                db.collection("cita")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        Log.d("MainActivity", "=== VERIFICACIÓN DE CITAS ===")
+                        Log.d("MainActivity", "Total citas encontradas: ${documents.size()}")
+
+                        for (document in documents) {
+                            val idCita = document.id
+                            val idPaciente = document.getLong("ID_PACIENTE") ?: 0L
+                            val fecha = document.getString("FECHA") ?: ""
+                            val estado = document.getString("ESTADO") ?: ""
+
+                            Log.d("MainActivity", "Cita ID: $idCita, Paciente: $idPaciente, Fecha: $fecha, Estado: $estado")
+                        }
+                        Log.d("MainActivity", "=== FIN VERIFICACIÓN ===")
+
+                        if (documents.isEmpty) {
+                            Toast.makeText(this, "⚠️ No hay citas en la base de datos", Toast.LENGTH_LONG).show()
+                        }
+                    }
+            }
+    }
+    /**
+     * Muestra una alerta cuando un paciente intenta agendar más de una cita por día
+     */
+    private fun mostrarAlertaLimiteCitas(paciente: PacienteReal) {
+        runOnUiThread {
+            val builder = AlertDialog.Builder(this)
+            builder.setTitle("Límite de Citas Alcanzado")
+            builder.setMessage("El paciente ${paciente.NOMBRE} ${paciente.APELLIDO} ya tiene una cita solicitada para hoy.\n\nSolo se permite 1 solicitud de cita por paciente por día.")
+            builder.setPositiveButton("Entendido", null)
+            builder.setIcon(android.R.drawable.ic_dialog_info)
+            builder.show()
+        }
+    }
+    /**
+     * Obtiene datos del paciente y crea la notificación correspondiente
+     */
+    private fun obtenerPacienteYCrearNotificacion(cita: CitaReal, tipoNotificacion: String) {
+        db.collection("pacientes")
+            .whereEqualTo("ID_PACIENTE", cita.ID_PACIENTE)
+            .get()
+            .addOnSuccessListener { pacientes ->
+                if (!pacientes.isEmpty) {
+                    val pacienteDoc = pacientes.documents.first()
+
+                    // 🔹 CORRECCIÓN: Manejar EDAD como String ya que en Firebase es "25" (string)
+                    val edadString = getSafeString(pacienteDoc, "EDAD")
+                    val edad = try {
+                        edadString.toInt()
+                    } catch (e: NumberFormatException) {
+                        0
+                    }
+
+                    // 🔹 CORRECCIÓN: Manejar CELULAR que puede ser String o Number
+                    val celular = getSafeString(pacienteDoc, "CELULAR")
+
+                    val paciente = PacienteReal(
+                        ID_PACIENTE = getSafeLong(pacienteDoc, "ID_PACIENTE"),
+                        NOMBRE = getSafeString(pacienteDoc, "NOMBRE"),
+                        APELLIDO = getSafeString(pacienteDoc, "APELLIDO"),
+                        CORREO = getSafeString(pacienteDoc, "CORREO"),
+                        CELULAR = celular, // 🔹 Usar la función segura
+                        DNI = getSafeString(pacienteDoc, "DNI"),
+                        EDAD = edad,
+                        SEXO = getSafeString(pacienteDoc, "SEXO")
+                    )
+                    crearNotificacionCita(cita, paciente, tipoNotificacion)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error al obtener paciente: ${e.message}")
+            }
+    }
+
+    /**
      * Carga las notificaciones reales del médico desde Firebase Firestore
      */
     private fun cargarNotificacionesReales(container: LinearLayout, searchBar: EditText) {
@@ -324,15 +780,16 @@ class MainActivity : AppCompatActivity() {
                     return@addOnSuccessListener
                 }
 
-                // Buscar notificaciones para este médico
+                // Buscar notificaciones para este médico - ordenadas por fecha (más recientes primero)
                 db.collection("notificaciones")
                     .whereEqualTo("ID_MEDICO", idMedico)
                     .orderBy("FECHA_ENVIO", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                    .limit(50)
                     .get()
                     .addOnSuccessListener { documents ->
                         mostrarLoadingIndicator(container, false)
 
-                        if (documents.isEmpty) { // ✅ Esto está correcto para Firestore
+                        if (documents.isEmpty) {
                             mostrarEstadoVacio(container, "No hay notificaciones")
                             return@addOnSuccessListener
                         }
@@ -357,10 +814,10 @@ class MainActivity : AppCompatActivity() {
                             val itemView = LayoutInflater.from(this)
                                 .inflate(R.layout.item_notification, container, false)
 
-                            // Configurar nombre (buscar nombre del paciente)
+                            // Configurar nombre del paciente
                             configurarNombrePacienteEnNotificacion(itemView, notificacion.ID_PACIENTE)
 
-                            // ✅ CORREGIDO: Solo usar tvNotificationType para mostrar título
+                            // 🔹 CORRECCIÓN: Mostrar el TÍTULO como tipo/estado (igual que antes)
                             itemView.findViewById<TextView>(R.id.tvNotificationType).text = notificacion.TITULO
 
                             // Listener para mostrar detalles
@@ -384,6 +841,44 @@ class MainActivity : AppCompatActivity() {
                 mostrarLoadingIndicator(container, false)
                 Toast.makeText(this, "Error al obtener datos del médico: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    /**
+     * Formatea la fecha de la notificación para mostrar de manera relativa
+     */
+    private fun formatearFechaNotificacion(timestamp: com.google.firebase.Timestamp): String {
+        return try {
+            val date = timestamp.toDate()
+            val now = Date()
+            val diff = now.time - date.time
+            val minutes = diff / (60 * 1000)
+            val hours = diff / (60 * 60 * 1000)
+            val days = diff / (24 * 60 * 60 * 1000)
+
+            when {
+                minutes < 1 -> "Hace unos segundos"
+                minutes < 60 -> "Hace $minutes min"
+                hours < 24 -> "Hace $hours h"
+                days < 7 -> "Hace $days días"
+                else -> SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date)
+            }
+        } catch (e: Exception) {
+            "Fecha no disponible"
+        }
+    }
+
+    // 🔹 TEMPORAL: Forzar recarga de notificaciones
+    private fun recargarNotificaciones() {
+        // Si estás en la pantalla de notificaciones, recargar
+        val currentLayout = mainContentFrame.getChildAt(0)
+        if (currentLayout != null) {
+            val container = currentLayout.findViewById<LinearLayout>(R.id.containerNotifications)
+            val searchBar = currentLayout.findViewById<EditText>(R.id.etSearchNotifications)
+            if (container != null && searchBar != null) {
+                cargarNotificacionesReales(container, searchBar)
+                Toast.makeText(this, "Notificaciones recargadas", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     /**
@@ -454,21 +949,27 @@ class MainActivity : AppCompatActivity() {
 
                                 for (document in pacientesDocuments) {
                                     try {
-                                        // ✅ USAR FUNCIONES SEGURAS PARA TODOS LOS CAMPOS
+                                        // 🔹 CORRECCIÓN: Usar funciones seguras para todos los campos
+                                        val edadString = getSafeString(document, "EDAD")
+                                        val edad = try {
+                                            edadString.toInt()
+                                        } catch (e: NumberFormatException) {
+                                            0
+                                        }
+
                                         val paciente = PacienteReal(
                                             ID_PACIENTE = getSafeLong(document, "ID_PACIENTE"),
                                             NOMBRE = getSafeString(document, "NOMBRE"),
                                             APELLIDO = getSafeString(document, "APELLIDO"),
                                             CORREO = getSafeString(document, "CORREO"),
-                                            CELULAR = getSafeString(document, "CELULAR"),
-                                            DNI = getSafeString(document, "DNI"), // ✅ MANEJADO SEGURO
-                                            EDAD = getSafeLong(document, "EDAD").toInt(),
+                                            CELULAR = getSafeString(document, "CELULAR"), // 🔹 Usar función segura
+                                            DNI = getSafeString(document, "DNI"),
+                                            EDAD = edad,
                                             SEXO = getSafeString(document, "SEXO")
                                         )
                                         pacientesList.add(paciente)
                                     } catch (e: Exception) {
                                         Log.e("MainActivity", "Error al procesar paciente: ${e.message}")
-                                        // Continuar con el siguiente paciente
                                     }
                                 }
 
@@ -927,15 +1428,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Muestra un indicador de carga (versión simplificada sin layout)
+     * Muestra un indicador de carga
      */
     private fun mostrarLoadingIndicator(container: LinearLayout, mostrar: Boolean) {
-        container.removeAllViews()
-
         if (mostrar) {
-            // Crear loading view simple sin layout
+            container.removeAllViews()
             val loadingView = TextView(this).apply {
-                text = "Cargando..."
+                text = "Cargando notificaciones..."
                 setTextColor(Color.parseColor("#9E9E9E"))
                 textSize = 16f
                 gravity = android.view.Gravity.CENTER
@@ -950,12 +1449,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Muestra estado vacío (versión simplificada sin layout)
+     * Muestra estado vacío
      */
     private fun mostrarEstadoVacio(container: LinearLayout, mensaje: String) {
         container.removeAllViews()
-
-        // Crear una vista simple sin layout
         val emptyView = TextView(this).apply {
             text = mensaje
             setTextColor(Color.parseColor("#9E9E9E"))
@@ -967,7 +1464,6 @@ class MainActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
-
         container.addView(emptyView)
     }
 
@@ -984,7 +1480,7 @@ class MainActivity : AppCompatActivity() {
             .whereEqualTo("ID_PACIENTE", idPaciente)
             .get()
             .addOnSuccessListener { documents ->
-                if (!documents.isEmpty) { // ✅ Esto está correcto para Firestore
+                if (!documents.isEmpty) {
                     val paciente = documents.documents.first()
                     val nombre = paciente.getString("NOMBRE") ?: ""
                     val apellido = paciente.getString("APELLIDO") ?: ""
@@ -1002,11 +1498,58 @@ class MainActivity : AppCompatActivity() {
      * Muestra detalles de una notificación
      */
     private fun mostrarDetallesNotificacion(notificacion: NotificacionReal) {
-        AlertDialog.Builder(this)
-            .setTitle(notificacion.TITULO)
-            .setMessage(notificacion.MENSAJE)
-            .setPositiveButton("Cerrar", null)
-            .show()
+        // Buscar información del paciente para mostrar detalles completos
+        if (notificacion.ID_PACIENTE != 0L) {
+            db.collection("pacientes")
+                .whereEqualTo("ID_PACIENTE", notificacion.ID_PACIENTE)
+                .get()
+                .addOnSuccessListener { pacientes ->
+                    val nombrePaciente = if (!pacientes.isEmpty) {
+                        val paciente = pacientes.documents.first()
+                        "${paciente.getString("NOMBRE") ?: ""} ${paciente.getString("APELLIDO") ?: ""}"
+                    } else {
+                        "Paciente no encontrado"
+                    }
+
+                    val fechaFormateada = try {
+                        val date = notificacion.FECHA_ENVIO.toDate()
+                        SimpleDateFormat("dd/MM/yyyy 'a las' HH:mm", Locale.getDefault()).format(date)
+                    } catch (e: Exception) {
+                        "Fecha no disponible"
+                    }
+
+                    val builder = AlertDialog.Builder(this)
+                    builder.setTitle("Detalles de la Notificación")
+                    builder.setMessage(
+                        "👤 Paciente: $nombrePaciente\n" +
+                                "📋 Tipo: ${notificacion.TITULO}\n" +
+                                "💬 Mensaje: ${notificacion.MENSAJE}\n" +
+                                "📅 Fecha: $fechaFormateada"
+                    )
+                    builder.setPositiveButton("Cerrar", null)
+                    builder.show()
+                }
+                .addOnFailureListener {
+                    // Si falla la búsqueda del paciente, mostrar solo la notificación básica
+                    AlertDialog.Builder(this)
+                        .setTitle("Detalles de la Notificación")
+                        .setMessage(
+                            "📋 Tipo: ${notificacion.TITULO}\n" +
+                                    "💬 Mensaje: ${notificacion.MENSAJE}"
+                        )
+                        .setPositiveButton("Cerrar", null)
+                        .show()
+                }
+        } else {
+            AlertDialog.Builder(this)
+                .setTitle("Detalles de la Notificación")
+                .setMessage(
+                    "📋 Tipo: ${notificacion.TITULO}\n" +
+                            "💬 Mensaje: ${notificacion.MENSAJE}"
+                )
+                .setPositiveButton("Cerrar", null)
+                .show()
+        }
     }
 
     /**
@@ -1257,6 +1800,7 @@ class MainActivity : AppCompatActivity() {
                 is Long -> value.toString()
                 is Double -> value.toLong().toString()
                 is Int -> value.toString()
+                is Float -> value.toInt().toString()
                 else -> ""
             }
         } catch (e: Exception) {
@@ -1277,4 +1821,1392 @@ class MainActivity : AppCompatActivity() {
             0L
         }
     }
+
+    /**
+     * Carga solo las notificaciones del día actual
+     */
+    private fun cargarNotificacionesDelDia(container: LinearLayout, searchBar: EditText) {
+        mostrarLoadingIndicator(container, true)
+        mostrandoHistorial = false
+        fechaFiltroHistorial = null
+
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            mostrarLoadingIndicator(container, false)
+            return
+        }
+
+        val fechaHoy = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+
+                if (idMedico == 0L) {
+                    mostrarLoadingIndicator(container, false)
+                    return@addOnSuccessListener
+                }
+
+                // Buscar notificaciones de HOY
+                val startOfDay = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.time
+
+                val endOfDay = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }.time
+
+                db.collection("notificaciones")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereGreaterThanOrEqualTo("FECHA_ENVIO", com.google.firebase.Timestamp(startOfDay))
+                    .whereLessThanOrEqualTo("FECHA_ENVIO", com.google.firebase.Timestamp(endOfDay))
+                    .orderBy("FECHA_ENVIO", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        mostrarLoadingIndicator(container, false)
+
+                        if (documents.isEmpty) {
+                            mostrarEstadoVacio(container, "No hay notificaciones para hoy")
+                            return@addOnSuccessListener
+                        }
+
+                        mostrarNotificacionesEnContenedor(documents, container, searchBar, "Hoy: $fechaHoy")
+                    }
+                    .addOnFailureListener { e ->
+                        mostrarLoadingIndicator(container, false)
+                        Toast.makeText(this, "Error al cargar notificaciones: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+            }
+    }
+
+    /**
+     * Muestra el diálogo de historial de notificaciones
+     */
+    private fun mostrarDialogoHistorialNotificaciones(container: LinearLayout, searchBar: EditText) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_notifications_history, null)
+        val builder = AlertDialog.Builder(this)
+            .setView(dialogView)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        // Referencias a las vistas del diálogo
+        val etFilterDate = dialogView.findViewById<EditText>(R.id.etFilterDate)
+        val btnToday = dialogView.findViewById<Button>(R.id.btnToday)
+        val btnYesterday = dialogView.findViewById<Button>(R.id.btnYesterday)
+        val btnClearFilter = dialogView.findViewById<Button>(R.id.btnClearFilter)
+        val btnCloseHistory = dialogView.findViewById<Button>(R.id.btnCloseHistory)
+        val containerHistory = dialogView.findViewById<LinearLayout>(R.id.containerHistory)
+        val tvHistoryTitle = dialogView.findViewById<TextView>(R.id.tvHistoryTitle)
+
+        // Configurar selector de fecha
+        etFilterDate.setOnClickListener {
+            mostrarSelectorFecha(etFilterDate)
+        }
+
+        // Botón "Hoy"
+        btnToday.setOnClickListener {
+            val fechaHoy = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+            etFilterDate.setText(fechaHoy)
+            cargarHistorialNotificaciones(fechaHoy, containerHistory, tvHistoryTitle)
+        }
+
+        // Botón "Ayer"
+        btnYesterday.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+            val fechaAyer = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
+            etFilterDate.setText(fechaAyer)
+            cargarHistorialNotificaciones(fechaAyer, containerHistory, tvHistoryTitle)
+        }
+
+        // Botón "Limpiar Filtro"
+        btnClearFilter.setOnClickListener {
+            etFilterDate.setText("")
+            containerHistory.removeAllViews()
+            tvHistoryTitle.text = "Seleccione una fecha para ver el historial"
+        }
+
+        // Botón "Cerrar"
+        btnCloseHistory.setOnClickListener {
+            dialog.dismiss()
+            // Recargar notificaciones del día actual al cerrar
+            cargarNotificacionesDelDia(container, searchBar)
+        }
+
+        // Cargar historial si ya hay una fecha filtrada
+        fechaFiltroHistorial?.let { fecha ->
+            etFilterDate.setText(fecha)
+            cargarHistorialNotificaciones(fecha, containerHistory, tvHistoryTitle)
+        }
+    }
+
+    /**
+     * Muestra el selector de fecha
+     */
+    private fun mostrarSelectorFecha(etFilterDate: EditText) {
+        val calendar = Calendar.getInstance()
+        val datePicker = DatePickerDialog(
+            this,
+            { _, year, month, day ->
+                val selectedDate = Calendar.getInstance().apply {
+                    set(year, month, day)
+                }
+                val fechaFormateada = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(selectedDate.time)
+                etFilterDate.setText(fechaFormateada)
+
+                // Cargar historial automáticamente al seleccionar fecha
+                val containerHistory = (etFilterDate.parent?.parent as? View)?.findViewById<LinearLayout>(R.id.containerHistory)
+                val tvHistoryTitle = (etFilterDate.parent?.parent as? View)?.findViewById<TextView>(R.id.tvHistoryTitle)
+                if (containerHistory != null && tvHistoryTitle != null) {
+                    cargarHistorialNotificaciones(fechaFormateada, containerHistory, tvHistoryTitle)
+                }
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        datePicker.show()
+    }
+
+    /**
+     * Carga el historial de notificaciones para una fecha específica
+     */
+    private fun cargarHistorialNotificaciones(fecha: String, container: LinearLayout, tvTitle: TextView) {
+        container.removeAllViews()
+        mostrarLoadingIndicatorHistorial(container, true)
+
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            mostrarLoadingIndicatorHistorial(container, false)
+            return
+        }
+
+        // Convertir fecha a formato para consulta
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val date = dateFormat.parse(fecha)
+
+        val calendar = Calendar.getInstance().apply {
+            time = date!!
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startOfDay = calendar.time
+
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endOfDay = calendar.time
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+
+                if (idMedico == 0L) {
+                    mostrarLoadingIndicatorHistorial(container, false)
+                    return@addOnSuccessListener
+                }
+
+                db.collection("notificaciones")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereGreaterThanOrEqualTo("FECHA_ENVIO", com.google.firebase.Timestamp(startOfDay))
+                    .whereLessThanOrEqualTo("FECHA_ENVIO", com.google.firebase.Timestamp(endOfDay))
+                    .orderBy("FECHA_ENVIO", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        mostrarLoadingIndicatorHistorial(container, false)
+
+                        tvTitle.text = "Notificaciones del $fecha (${documents.size()} encontradas)"
+
+                        if (documents.isEmpty) {
+                            mostrarEstadoVacioHistorial(container, "No hay notificaciones para esta fecha")
+                            return@addOnSuccessListener
+                        }
+
+                        // Guardar fecha filtrada para persistencia
+                        fechaFiltroHistorial = fecha
+
+                        // Mostrar notificaciones en el historial
+                        for (document in documents) {
+                            val notificacion = document.toObject(NotificacionReal::class.java)
+                            val itemView = LayoutInflater.from(this)
+                                .inflate(R.layout.item_notification, container, false)
+
+                            configurarNombrePacienteEnNotificacion(itemView, notificacion.ID_PACIENTE)
+                            itemView.findViewById<TextView>(R.id.tvNotificationType).text = notificacion.TITULO
+
+                            // Mostrar hora exacta en el historial
+                            val hora = SimpleDateFormat("HH:mm", Locale.getDefault()).format(notificacion.FECHA_ENVIO.toDate())
+                            itemView.findViewById<TextView>(R.id.tvNotificationType).text = "${notificacion.TITULO} - $hora"
+
+                            itemView.setOnClickListener {
+                                mostrarDetallesNotificacion(notificacion)
+                            }
+
+                            container.addView(itemView)
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        mostrarLoadingIndicatorHistorial(container, false)
+                        Toast.makeText(this, "Error al cargar historial: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+            }
+    }
+
+    /**
+     * Funciones auxiliares para el historial
+     */
+    private fun mostrarLoadingIndicatorHistorial(container: LinearLayout, mostrar: Boolean) {
+        if (mostrar) {
+            container.removeAllViews()
+            val loadingView = TextView(this).apply {
+                text = "Cargando historial..."
+                setTextColor(Color.parseColor("#9E9E9E"))
+                textSize = 14f
+                gravity = android.view.Gravity.CENTER
+                setPadding(0, 16, 0, 16)
+            }
+            container.addView(loadingView)
+        }
+    }
+
+    private fun mostrarEstadoVacioHistorial(container: LinearLayout, mensaje: String) {
+        container.removeAllViews()
+        val emptyView = TextView(this).apply {
+            text = mensaje
+            setTextColor(Color.parseColor("#9E9E9E"))
+            textSize = 14f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 16, 0, 16)
+        }
+        container.addView(emptyView)
+    }
+
+
+    /**
+     * Función genérica para mostrar notificaciones en cualquier contenedor
+     */
+    private fun mostrarNotificacionesEnContenedor(
+        documents: QuerySnapshot,
+        container: LinearLayout,
+        searchBar: EditText?,
+        titulo: String = "Notificaciones"
+    ) {
+        container.removeAllViews()
+
+        val notificacionesList = mutableListOf<NotificacionReal>()
+        val itemViews = mutableListOf<View>()
+
+        for (document in documents) {
+            val notificacion = NotificacionReal(
+                ID_NOTIFICACIONES = document.getLong("ID_NOTIFICACIONES") ?: 0L,
+                TITULO = document.getString("TITULO") ?: "",
+                MENSAJE = document.getString("MENSAJE") ?: "",
+                FECHA_ENVIO = document.getTimestamp("FECHA_ENVIO") ?: com.google.firebase.Timestamp.now(),
+                ID_PACIENTE = document.getLong("ID_PACIENTE") ?: 0L,
+                ID_MEDICO = document.getLong("ID_MEDICO") ?: 0L
+            )
+            notificacionesList.add(notificacion)
+        }
+
+        // Mostrar título si es necesario
+        if (titulo.isNotEmpty()) {
+            val titleView = TextView(this).apply {
+                text = titulo
+                setTextColor(Color.parseColor("#000000"))
+                textSize = 16f
+                setTypeface(null, Typeface.BOLD)
+                setPadding(0, 0, 0, 16)
+            }
+            container.addView(titleView)
+        }
+
+        // Inflar y mostrar notificaciones
+        for (notificacion in notificacionesList) {
+            val itemView = LayoutInflater.from(this)
+                .inflate(R.layout.item_notification, container, false)
+
+            configurarNombrePacienteEnNotificacion(itemView, notificacion.ID_PACIENTE)
+            itemView.findViewById<TextView>(R.id.tvNotificationType).text = notificacion.TITULO
+
+            itemView.setOnClickListener {
+                mostrarDetallesNotificacion(notificacion)
+            }
+
+            container.addView(itemView)
+            itemViews.add(itemView)
+        }
+
+        // Configurar búsqueda si se proporcionó searchBar
+        searchBar?.let {
+            setupSearch(it, itemViews, R.id.tvNotificationName)
+        }
+    }
+
+    /**
+     * Carga solo los pacientes con citas activas (no completadas) - VERSIÓN SIN ÍNDICE
+     */
+    private fun cargarPacientesActivos(container: LinearLayout, searchBar: EditText) {
+        mostrarLoadingIndicator(container, true)
+
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            mostrarLoadingIndicator(container, false)
+            return
+        }
+
+        // Primero obtener el ID_MEDICO del usuario actual
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+
+                if (idMedico == 0L) {
+                    mostrarLoadingIndicator(container, false)
+                    return@addOnSuccessListener
+                }
+
+                // 🔹 CONSULTA SIMPLIFICADA: Solo por ID_MEDICO (sin filtro por estado)
+                db.collection("cita")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .get()
+                    .addOnSuccessListener { citasDocuments ->
+                        mostrarLoadingIndicator(container, false)
+
+                        if (citasDocuments.isEmpty) {
+                            mostrarEstadoVacio(container, "No hay pacientes activos")
+                            return@addOnSuccessListener
+                        }
+
+                        val pacientesIds = mutableSetOf<Long>()
+                        val citasActivas = mutableListOf<com.google.firebase.firestore.QueryDocumentSnapshot>()
+
+                        // 🔹 FILTRAR LOCALMENTE las citas no completadas
+                        for (document in citasDocuments) {
+                            val idPaciente = document.getLong("ID_PACIENTE") ?: 0L
+                            val estado = document.getString("ESTADO") ?: ""
+
+                            if (idPaciente != 0L && estado != "completada") {
+                                pacientesIds.add(idPaciente)
+                                citasActivas.add(document)
+                            }
+                        }
+
+                        if (pacientesIds.isEmpty()) {
+                            mostrarEstadoVacio(container, "No hay pacientes activos")
+                            return@addOnSuccessListener
+                        }
+
+                        // Buscar información de los pacientes activos
+                        db.collection("pacientes")
+                            .whereIn("ID_PACIENTE", pacientesIds.toList())
+                            .get()
+                            .addOnSuccessListener { pacientesDocuments ->
+                                mostrarLoadingIndicator(container, false)
+
+                                if (pacientesDocuments.isEmpty) {
+                                    mostrarEstadoVacio(container, "No se encontraron datos de pacientes")
+                                    return@addOnSuccessListener
+                                }
+
+                                val pacientesList = mutableListOf<PacienteReal>()
+                                val itemViews = mutableListOf<View>()
+
+                                for (document in pacientesDocuments) {
+                                    try {
+                                        val paciente = PacienteReal(
+                                            ID_PACIENTE = getSafeLong(document, "ID_PACIENTE"),
+                                            NOMBRE = getSafeString(document, "NOMBRE"),
+                                            APELLIDO = getSafeString(document, "APELLIDO"),
+                                            CORREO = getSafeString(document, "CORREO"),
+                                            CELULAR = getSafeString(document, "CELULAR"),
+                                            DNI = getSafeString(document, "DNI"),
+                                            EDAD = 0,
+                                            SEXO = getSafeString(document, "SEXO")
+                                        )
+                                        pacientesList.add(paciente)
+                                    } catch (e: Exception) {
+                                        Log.e("MainActivity", "Error al procesar paciente: ${e.message}")
+                                    }
+                                }
+
+                                // Inflar y mostrar pacientes con botones funcionales
+                                for (paciente in pacientesList) {
+                                    val itemView = LayoutInflater.from(this)
+                                        .inflate(R.layout.item_patient, container, false)
+
+                                    itemView.findViewById<TextView>(R.id.tvPatientName).text =
+                                        "${paciente.NOMBRE} ${paciente.APELLIDO}"
+
+                                    // 🔹 CONFIGURAR BOTÓN CHECK PARA MARCAR COMO COMPLETADO
+                                    val btnCheckComplete = itemView.findViewById<ImageButton>(R.id.btnCheckComplete)
+                                    btnCheckComplete.setOnClickListener {
+                                        mostrarDialogoCompletarCita(paciente)
+                                    }
+
+                                    // Configurar otros botones (opcional)
+                                    configurarBotonesPaciente(itemView, paciente)
+
+                                    container.addView(itemView)
+                                    itemViews.add(itemView)
+                                }
+
+                                // Configurar búsqueda
+                                setupSearch(searchBar, itemViews, R.id.tvPatientName)
+                            }
+                            .addOnFailureListener { e ->
+                                mostrarLoadingIndicator(container, false)
+                                Log.e("MainActivity", "Error al cargar pacientes: ${e.message}")
+                                mostrarEstadoVacio(container, "Error al cargar pacientes")
+                            }
+                    }
+                    .addOnFailureListener { e ->
+                        mostrarLoadingIndicator(container, false)
+                        Log.e("MainActivity", "Error al buscar citas: ${e.message}")
+                        mostrarEstadoVacio(container, "Error al buscar citas")
+                    }
+            }
+            .addOnFailureListener { e ->
+                mostrarLoadingIndicator(container, false)
+                Log.e("MainActivity", "Error al obtener datos del médico: ${e.message}")
+                mostrarEstadoVacio(container, "Error del médico")
+            }
+    }
+
+    /**
+     * Muestra diálogo para confirmar completar la cita de un paciente
+     */
+    private fun mostrarDialogoCompletarCita(paciente: PacienteReal) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Completar Cita")
+        builder.setMessage("¿Desea marcar como COMPLETADA la cita del paciente ${paciente.NOMBRE} ${paciente.APELLIDO}?")
+
+        builder.setPositiveButton("Sí, Completar") { dialog, _ ->
+            completarCitaPaciente(paciente)
+            dialog.dismiss()
+        }
+
+        builder.setNegativeButton("Cancelar") { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        builder.show()
+    }
+
+    /**
+     * Completa la cita de un paciente y actualiza la base de datos
+     */
+    private fun completarCitaPaciente(paciente: PacienteReal) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) return
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) return@addOnSuccessListener
+
+                // Buscar la cita activa del paciente
+                db.collection("cita")
+                    .whereEqualTo("ID_PACIENTE", paciente.ID_PACIENTE)
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereNotEqualTo("ESTADO", "completada")
+                    .get()
+                    .addOnSuccessListener { citas ->
+                        if (!citas.isEmpty) {
+                            val citaDoc = citas.documents.first()
+                            val citaId = citaDoc.id
+
+                            // Actualizar estado a "completada"
+                            db.collection("cita").document(citaId)
+                                .update("ESTADO", "completada")
+                                .addOnSuccessListener {
+                                    Log.d("MainActivity", "✅ Cita marcada como completada")
+
+                                    // Crear notificación de cita completada
+                                    val cita = citaDoc.toObject(CitaReal::class.java)
+                                    if (cita != null) {
+                                        crearNotificacionCitaCompletada(cita, paciente)
+                                    }
+
+                                    // Mostrar mensaje de éxito
+                                    Toast.makeText(this, "Cita completada exitosamente", Toast.LENGTH_SHORT).show()
+
+                                    // Recargar la lista de pacientes
+                                    val currentLayout = mainContentFrame.getChildAt(0)
+                                    if (currentLayout != null) {
+                                        val container = currentLayout.findViewById<LinearLayout>(R.id.containerPatients)
+                                        val searchBar = currentLayout.findViewById<EditText>(R.id.etSearchPatients)
+                                        if (container != null && searchBar != null) {
+                                            cargarPacientesActivos(container, searchBar)
+                                        }
+                                    }
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("MainActivity", "❌ Error al completar cita: ${e.message}")
+                                    Toast.makeText(this, "Error al completar cita", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    }
+            }
+    }
+
+    /**
+     * Crea notificación especial para cita completada
+     */
+    private fun crearNotificacionCitaCompletada(cita: CitaReal, paciente: PacienteReal) {
+        val currentUser = auth.currentUser ?: return
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) return@addOnSuccessListener
+
+                val notificacionData = hashMapOf(
+                    "ID_NOTIFICACIONES" to System.currentTimeMillis(),
+                    "TITULO" to "🏁 Cita Completada",
+                    "MENSAJE" to "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} ha sido completada exitosamente. Paciente atendido.",
+                    "FECHA_ENVIO" to com.google.firebase.Timestamp.now(),
+                    "ID_PACIENTE" to cita.ID_PACIENTE,
+                    "ID_MEDICO" to idMedico,
+                    "TIPO" to "completada" // 🔹 PARA FILTRAR EN EL HISTORIAL
+                )
+
+                db.collection("notificaciones")
+                    .add(notificacionData)
+                    .addOnSuccessListener {
+                        Log.d("MainActivity", "✅ Notificación de cita completada creada")
+                    }
+            }
+    }
+
+    /**
+     * Muestra el historial de pacientes completados - VERSIÓN ACTUALIZADA CON FILTRO
+     */
+    private fun mostrarDialogoHistorialPacientesCompletados(container: LinearLayout, searchBar: EditText) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_patients_history, null)
+        val builder = AlertDialog.Builder(this)
+            .setView(dialogView)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        // Referencias a las vistas del diálogo
+        val etFilterDate = dialogView.findViewById<EditText>(R.id.etFilterDate)
+        val btnToday = dialogView.findViewById<Button>(R.id.btnToday)
+        val btnYesterday = dialogView.findViewById<Button>(R.id.btnYesterday)
+        val btnAll = dialogView.findViewById<Button>(R.id.btnAll)
+        val btnClearFilter = dialogView.findViewById<Button>(R.id.btnClearFilter)
+        val btnCloseHistory = dialogView.findViewById<Button>(R.id.btnCloseHistory)
+        val containerHistory = dialogView.findViewById<LinearLayout>(R.id.containerHistory)
+        val tvHistoryTitle = dialogView.findViewById<TextView>(R.id.tvHistoryTitle)
+
+        // Cambiar título
+        tvHistoryTitle.text = "Seleccione una fecha para filtrar"
+
+        // Configurar selector de fecha
+        etFilterDate.setOnClickListener {
+            mostrarSelectorFechaPacientes(etFilterDate, containerHistory, tvHistoryTitle)
+        }
+
+        // Botón "Hoy"
+        btnToday.setOnClickListener {
+            val fechaHoy = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+            etFilterDate.setText(fechaHoy)
+            cargarPacientesPorFecha(fechaHoy, containerHistory, tvHistoryTitle)
+        }
+
+        // Botón "Ayer"
+        btnYesterday.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+            val fechaAyer = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
+            etFilterDate.setText(fechaAyer)
+            cargarPacientesPorFecha(fechaAyer, containerHistory, tvHistoryTitle)
+        }
+
+        // Botón "Todos"
+        btnAll.setOnClickListener {
+            etFilterDate.setText("")
+            cargarTodosLosPacientes(containerHistory, tvHistoryTitle)
+        }
+
+        // Botón "Limpiar Filtro"
+        btnClearFilter.setOnClickListener {
+            etFilterDate.setText("")
+            containerHistory.removeAllViews()
+            tvHistoryTitle.text = "Seleccione una fecha para filtrar"
+        }
+
+        // Botón "Cerrar"
+        btnCloseHistory.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // Cargar todos los pacientes por defecto
+        cargarTodosLosPacientes(containerHistory, tvHistoryTitle)
+    }
+
+    /**
+     * Selector de fecha para pacientes
+     */
+    private fun mostrarSelectorFechaPacientes(etFilterDate: EditText, containerHistory: LinearLayout, tvHistoryTitle: TextView) {
+        val calendar = Calendar.getInstance()
+        val datePicker = DatePickerDialog(
+            this,
+            { _, year, month, day ->
+                val selectedDate = Calendar.getInstance().apply {
+                    set(year, month, day)
+                }
+                val fechaFormateada = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(selectedDate.time)
+                etFilterDate.setText(fechaFormateada)
+                cargarPacientesPorFecha(fechaFormateada, containerHistory, tvHistoryTitle)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        datePicker.show()
+    }
+
+    /**
+     * Carga pacientes por fecha específica - VERSIÓN CORREGIDA (filtra por FECHA_FIN_CONSULTA)
+     */
+    private fun cargarPacientesPorFecha(fecha: String, container: LinearLayout, titleView: TextView) {
+        container.removeAllViews()
+        mostrarLoadingIndicatorHistorial(container, true)
+
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            mostrarLoadingIndicatorHistorial(container, false)
+            return
+        }
+
+        Log.d("MainActivity", "🔍 Buscando pacientes completados para fecha: $fecha")
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) {
+                    mostrarLoadingIndicatorHistorial(container, false)
+                    return@addOnSuccessListener
+                }
+
+                Log.d("MainActivity", "👨‍⚕️ ID Médico: $idMedico")
+
+                // 🔹 BUSCAR CITAS COMPLETADAS DEL MÉDICO
+                db.collection("cita")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereEqualTo("ESTADO", "completada")
+                    .get()
+                    .addOnSuccessListener { citasCompletadas ->
+                        mostrarLoadingIndicatorHistorial(container, false)
+
+                        Log.d("MainActivity", "📄 Total de citas completadas: ${citasCompletadas.size()}")
+
+                        val citasFiltradas = mutableListOf<com.google.firebase.firestore.QueryDocumentSnapshot>()
+
+                        // 🔹 FILTRAR POR FECHA_FIN_CONSULTA
+                        for (cita in citasCompletadas) {
+                            val fechaFinConsulta = cita.getTimestamp("FECHA_FIN_CONSULTA")
+                            val idPaciente = cita.getLong("ID_PACIENTE") ?: 0L
+                            val idCita = cita.getLong("ID_CITA") ?: 0L
+
+                            if (fechaFinConsulta != null && coincideFechaFinConsulta(fecha, fechaFinConsulta)) {
+                                citasFiltradas.add(cita)
+                                Log.d("MainActivity", "✅ Cita completada COINCIDE con filtro - ID: $idCita, Paciente: $idPaciente")
+                            }
+                        }
+
+                        Log.d("MainActivity", "🎯 Citas completadas filtradas: ${citasFiltradas.size}")
+
+                        if (citasFiltradas.isEmpty()) {
+                            mostrarEstadoVacioHistorial(container, "No hay pacientes completados para la fecha seleccionada")
+                            titleView.text = "Pacientes completados del $fecha - 0 resultados"
+                            return@addOnSuccessListener
+                        }
+
+                        titleView.text = "Pacientes completados del $fecha - ${citasFiltradas.size} resultados"
+
+                        // Obtener detalles de los pacientes
+                        for (cita in citasFiltradas) {
+                            val idPaciente = cita.getLong("ID_PACIENTE") ?: continue
+                            obtenerDetallesPacienteParaHistorial(idPaciente, cita, container)
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        mostrarLoadingIndicatorHistorial(container, false)
+                        Log.e("MainActivity", "❌ Error al cargar citas completadas: ${e.message}")
+                        Toast.makeText(this, "Error al cargar pacientes completados", Toast.LENGTH_SHORT).show()
+                    }
+            }
+            .addOnFailureListener { e ->
+                mostrarLoadingIndicatorHistorial(container, false)
+                Log.e("MainActivity", "❌ Error al obtener datos del médico: ${e.message}")
+                Toast.makeText(this, "Error al obtener datos del médico", Toast.LENGTH_SHORT).show()
+            }
+    }
+    /**
+     * 🔹 NUEVA FUNCIÓN: Compara si una fecha en formato DD/MM/YYYY coincide con FECHA_FIN_CONSULTA
+     */
+    private fun coincideFechaFinConsulta(fechaFiltro: String, fechaFinConsulta: com.google.firebase.Timestamp): Boolean {
+        return try {
+            // Formato del filtro: DD/MM/YYYY
+            val dateFormatFiltro = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            val fechaFiltroDate = dateFormatFiltro.parse(fechaFiltro)
+
+            if (fechaFiltroDate == null) return false
+
+            // Convertir Timestamp a Date
+            val fechaFinDate = fechaFinConsulta.toDate()
+
+            // Comparar solo día, mes y año (ignorar hora)
+            val calendarFiltro = Calendar.getInstance().apply { time = fechaFiltroDate }
+            val calendarFin = Calendar.getInstance().apply { time = fechaFinDate }
+
+            val diaFiltro = calendarFiltro.get(Calendar.DAY_OF_MONTH)
+            val mesFiltro = calendarFiltro.get(Calendar.MONTH)
+            val añoFiltro = calendarFiltro.get(Calendar.YEAR)
+
+            val diaFin = calendarFin.get(Calendar.DAY_OF_MONTH)
+            val mesFin = calendarFin.get(Calendar.MONTH)
+            val añoFin = calendarFin.get(Calendar.YEAR)
+
+            val coincide = (diaFiltro == diaFin && mesFiltro == mesFin && añoFiltro == añoFin)
+
+            if (coincide) {
+                Log.d("MainActivity", "🎯 Fecha fin consulta coincide: $fechaFiltro == ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechaFinDate)}")
+            }
+
+            coincide
+        } catch (e: Exception) {
+            Log.e("MainActivity", "❌ Error al comparar fecha fin consulta: $fechaFiltro - ${e.message}")
+            false
+        }
+    }
+    /**
+     * 🔹 NUEVA FUNCIÓN: Compara si una fecha en formato DD/MM/YYYY coincide con una fecha de la base de datos
+     */
+    private fun coincideFecha(fechaFiltro: String, fechaBaseDatos: String): Boolean {
+        return try {
+            // Formato del filtro: DD/MM/YYYY
+            val dateFormatFiltro = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            val fechaFiltroDate = dateFormatFiltro.parse(fechaFiltro)
+
+            if (fechaFiltroDate == null) return false
+
+            // Intentar diferentes formatos de la base de datos
+            val formatosBaseDatos = listOf(
+                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()),
+                SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()),
+                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()),
+                SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+            )
+
+            for (formato in formatosBaseDatos) {
+                try {
+                    val fechaBaseDate = formato.parse(fechaBaseDatos)
+                    if (fechaBaseDate != null && fechaFiltroDate == fechaBaseDate) {
+                        Log.d("MainActivity", "🎯 Fechas coinciden: $fechaFiltro == $fechaBaseDatos (formato: ${formato.toPattern()})")
+                        return true
+                    }
+                } catch (e: Exception) {
+                    // Continuar con el siguiente formato
+                    continue
+                }
+            }
+
+            // 🔹 COMPARACIÓN DIRECTA POR DÍA, MES Y AÑO (más robusta)
+            val calendarFiltro = Calendar.getInstance().apply { time = fechaFiltroDate }
+            val diaFiltro = calendarFiltro.get(Calendar.DAY_OF_MONTH)
+            val mesFiltro = calendarFiltro.get(Calendar.MONTH)
+            val añoFiltro = calendarFiltro.get(Calendar.YEAR)
+
+            // Intentar extraer día, mes y año de la fecha de la base de datos
+            val patrones = listOf(
+                Regex("""(\d{4})[-/](\d{1,2})[-/](\d{1,2})"""), // YYYY-MM-DD o YYYY/MM/DD
+                Regex("""(\d{1,2})[-/](\d{1,2})[-/](\d{4})""")  // DD-MM-YYYY o DD/MM/YYYY
+            )
+
+            for (patron in patrones) {
+                val match = patron.find(fechaBaseDatos)
+                if (match != null) {
+                    val grupos = match.groupValues
+                    if (grupos.size == 4) {
+                        val (_, p1, p2, p3) = grupos
+
+                        val (diaBD, mesBD, añoBD) = try {
+                            if (patron.pattern.contains("""(\d{4})[-/]""")) {
+                                // Formato: YYYY-MM-DD
+                                Triple(p3.toInt(), p2.toInt() - 1, p1.toInt()) // Mes en Calendar es 0-based
+                            } else {
+                                // Formato: DD-MM-YYYY
+                                Triple(p1.toInt(), p2.toInt() - 1, p3.toInt()) // Mes en Calendar es 0-based
+                            }
+                        } catch (e: NumberFormatException) {
+                            continue
+                        }
+
+                        if (diaBD == diaFiltro && mesBD == mesFiltro && añoBD == añoFiltro) {
+                            Log.d("MainActivity", "🎯 Fechas coinciden (comparación directa): $fechaFiltro == $fechaBaseDatos")
+                            return true
+                        }
+                    }
+                }
+            }
+
+            false
+        } catch (e: Exception) {
+            Log.e("MainActivity", "❌ Error al comparar fechas: $fechaFiltro vs $fechaBaseDatos - ${e.message}")
+            false
+        }
+    }
+
+
+
+    /**
+     * Carga todos los pacientes completados (sin filtro de fecha) - VERSIÓN CORREGIDA
+     */
+    private fun cargarTodosLosPacientes(container: LinearLayout, titleView: TextView) {
+        container.removeAllViews()
+        mostrarLoadingIndicatorHistorial(container, true)
+
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            mostrarLoadingIndicatorHistorial(container, false)
+            return
+        }
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) {
+                    mostrarLoadingIndicatorHistorial(container, false)
+                    return@addOnSuccessListener
+                }
+
+                // 🔹 BUSCAR SOLO CITAS COMPLETADAS
+                db.collection("cita")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereEqualTo("ESTADO", "completada")
+                    .get()
+                    .addOnSuccessListener { citasCompletadas ->
+                        mostrarLoadingIndicatorHistorial(container, false)
+
+                        Log.d("MainActivity", "📄 Total de citas completadas: ${citasCompletadas.size()}")
+
+                        if (citasCompletadas.isEmpty()) {
+                            mostrarEstadoVacioHistorial(container, "No hay pacientes completados en el historial")
+                            titleView.text = "Todos los pacientes completados - 0 resultados"
+                            return@addOnSuccessListener
+                        }
+
+                        titleView.text = "Todos los pacientes completados - ${citasCompletadas.size()} resultados"
+
+                        // 🔹 ORDENAR POR FECHA_FIN_CONSULTA (más recientes primero)
+                        val citasOrdenadas = citasCompletadas.sortedByDescending { cita ->
+                            cita.getTimestamp("FECHA_FIN_CONSULTA")?.toDate() ?: Date(0)
+                        }
+
+                        // Obtener detalles de todos los pacientes completados
+                        for (cita in citasOrdenadas) {
+                            val idPaciente = cita.getLong("ID_PACIENTE") ?: continue
+                            obtenerDetallesPacienteParaHistorial(idPaciente, cita, container)
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        mostrarLoadingIndicatorHistorial(container, false)
+                        Log.e("MainActivity", "❌ Error al cargar citas completadas: ${e.message}")
+                        Toast.makeText(this, "Error al cargar pacientes completados", Toast.LENGTH_SHORT).show()
+                    }
+            }
+            .addOnFailureListener { e ->
+                mostrarLoadingIndicatorHistorial(container, false)
+                Log.e("MainActivity", "❌ Error al obtener datos del médico: ${e.message}")
+                Toast.makeText(this, "Error al obtener datos del médico", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    /**
+     * Método alternativo si falla el whereIn - busca en ambos formatos de fecha por separado
+     */
+    private fun cargarPacientesPorFechaAlternativo(
+        idMedico: Long,
+        fecha1: String,
+        fecha2: String,
+        fechaOriginal: String,
+        container: LinearLayout,
+        titleView: TextView
+    ) {
+        val todasLasCitas = mutableListOf<com.google.firebase.firestore.QueryDocumentSnapshot>()
+
+        mostrarLoadingIndicatorHistorial(container, true)
+
+        Log.d("MainActivity", "Buscando citas en formato 1: $fecha1")
+        Log.d("MainActivity", "Buscando citas en formato 2: $fecha2")
+
+        // Primera consulta - formato YYYY-MM-DD
+        db.collection("cita")
+            .whereEqualTo("ID_MEDICO", idMedico)
+            .whereEqualTo("FECHA", fecha1)
+            .get()
+            .addOnSuccessListener { citas1 ->
+                Log.d("MainActivity", "Citas encontradas en formato 1: ${citas1.size()}")
+                todasLasCitas.addAll(citas1)
+
+                // Segunda consulta - formato YYYY/MM/DD
+                db.collection("cita")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereEqualTo("FECHA", fecha2)
+                    .get()
+                    .addOnSuccessListener { citas2 ->
+                        Log.d("MainActivity", "Citas encontradas en formato 2: ${citas2.size()}")
+                        todasLasCitas.addAll(citas2)
+
+                        mostrarLoadingIndicatorHistorial(container, false)
+
+                        // 🔹 CORRECCIÓN: Usar isEmpty() con paréntesis
+                        if (todasLasCitas.isEmpty()) {
+                            mostrarEstadoVacioHistorial(container, "No hay pacientes para la fecha seleccionada")
+                            titleView.text = "Pacientes del $fechaOriginal - 0 resultados"
+                            return@addOnSuccessListener
+                        }
+
+                        // Eliminar duplicados por ID_CITA
+                        val citasUnicas = todasLasCitas.distinctBy { it.getLong("ID_CITA") ?: 0L }
+
+                        titleView.text = "Pacientes del $fechaOriginal - ${citasUnicas.size} resultados"
+
+                        // Obtener detalles de los pacientes
+                        for (cita in citasUnicas) {
+                            val idPaciente = cita.getLong("ID_PACIENTE") ?: continue
+                            obtenerDetallesPacienteParaHistorial(idPaciente, cita, container)
+                        }
+                    }
+                    .addOnFailureListener { e2 ->
+                        mostrarLoadingIndicatorHistorial(container, false)
+                        Log.e("MainActivity", "Error en segunda consulta de fecha: ${e2.message}")
+                        // Mostrar lo que se encontró en la primera consulta
+                        // 🔹 CORRECCIÓN: Usar isEmpty() con paréntesis
+                        if (todasLasCitas.isNotEmpty()) {
+                            mostrarLoadingIndicatorHistorial(container, false)
+                            val citasUnicas = todasLasCitas.distinctBy { it.getLong("ID_CITA") ?: 0L }
+                            titleView.text = "Pacientes del $fechaOriginal - ${citasUnicas.size} resultados"
+                            for (cita in citasUnicas) {
+                                val idPaciente = cita.getLong("ID_PACIENTE") ?: continue
+                                obtenerDetallesPacienteParaHistorial(idPaciente, cita, container)
+                            }
+                        } else {
+                            mostrarEstadoVacioHistorial(container, "No hay pacientes para la fecha seleccionada")
+                            titleView.text = "Pacientes del $fechaOriginal - 0 resultados"
+                        }
+                    }
+            }
+            .addOnFailureListener { e1 ->
+                mostrarLoadingIndicatorHistorial(container, false)
+                Log.e("MainActivity", "Error en primera consulta de fecha: ${e1.message}")
+                mostrarEstadoVacioHistorial(container, "Error al cargar pacientes: ${e1.message}")
+            }
+    }
+    /**
+     * Obtiene detalles del paciente para mostrar en el historial - VERSIÓN MEJORADA
+     */
+    private fun obtenerDetallesPacienteParaHistorial(idPaciente: Long, cita: com.google.firebase.firestore.QueryDocumentSnapshot, container: LinearLayout) {
+        db.collection("pacientes")
+            .whereEqualTo("ID_PACIENTE", idPaciente)
+            .get()
+            .addOnSuccessListener { pacientes ->
+                if (!pacientes.isEmpty()) {
+                    val paciente = pacientes.documents.first()
+                    val nombre = paciente.getString("NOMBRE") ?: "Nombre no disponible"
+                    val apellido = paciente.getString("APELLIDO") ?: ""
+                    val fechaFinConsulta = cita.getTimestamp("FECHA_FIN_CONSULTA")
+                    val estado = cita.getString("ESTADO") ?: "Estado no disponible"
+                    val hora = cita.getString("HORA") ?: ""
+
+                    // Formatear fecha de finalización
+                    val fechaFinFormateada = if (fechaFinConsulta != null) {
+                        try {
+                            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                            dateFormat.format(fechaFinConsulta.toDate())
+                        } catch (e: Exception) {
+                            "Fecha no disponible"
+                        }
+                    } else {
+                        "Fecha no disponible"
+                    }
+
+                    agregarPacienteAListaHistorial("$nombre $apellido", fechaFinFormateada, hora, estado, container)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error al obtener paciente: ${e.message}")
+            }
+    }
+
+    /**
+     * Agrega un paciente a la lista del historial
+     */
+    private fun agregarPacienteAListaHistorial(nombre: String, fecha: String, hora: String, estado: String, container: LinearLayout) {
+        val itemView = LayoutInflater.from(this).inflate(R.layout.item_notification, container, false)
+
+        val tvPatientName = itemView.findViewById<TextView>(R.id.tvNotificationName)
+        val tvNotificationType = itemView.findViewById<TextView>(R.id.tvNotificationType)
+
+        tvPatientName.text = nombre
+
+        // Formatear hora si está disponible
+        val horaFormateada = if (hora.isNotEmpty() && hora.length >= 5) {
+            hora.substring(0, 5) // Tomar solo HH:MM
+        } else {
+            hora
+        }
+
+        // Mostrar información de la cita
+        val infoCita = if (horaFormateada.isNotEmpty()) {
+            "📅 $fecha - 🕒 $horaFormateada - $estado"
+        } else {
+            "📅 $fecha - $estado"
+        }
+
+        tvNotificationType.text = infoCita
+
+        // Color según el estado
+        when (estado.toLowerCase(Locale.getDefault())) {
+            "completada" -> tvNotificationType.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_dark))
+            "cancelada" -> tvNotificationType.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+            "pendiente" -> tvNotificationType.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_dark))
+            "confirmada", "reservada" -> tvNotificationType.setTextColor(ContextCompat.getColor(this, android.R.color.holo_blue_dark))
+            else -> tvNotificationType.setTextColor(ContextCompat.getColor(this, android.R.color.darker_gray))
+        }
+
+        container.addView(itemView)
+    }
+
+    /**
+     * Carga la lista de pacientes con citas completadas
+     */
+    private fun cargarPacientesCompletados(container: LinearLayout) {
+        container.removeAllViews()
+        mostrarLoadingIndicatorHistorial(container, true)
+
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            mostrarLoadingIndicatorHistorial(container, false)
+            return
+        }
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) {
+                    mostrarLoadingIndicatorHistorial(container, false)
+                    return@addOnSuccessListener
+                }
+
+                // Buscar citas completadas
+                db.collection("cita")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .whereEqualTo("ESTADO", "completada")
+                    .orderBy("FECHA", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                    .get()
+                    .addOnSuccessListener { citasDocuments ->
+                        if (citasDocuments.isEmpty) {
+                            mostrarLoadingIndicatorHistorial(container, false)
+                            mostrarEstadoVacioHistorial(container, "No hay pacientes completados")
+                            return@addOnSuccessListener
+                        }
+
+                        val pacientesIds = mutableSetOf<Long>()
+                        val citasCompletadas = mutableListOf<CitaReal>()
+
+                        for (document in citasDocuments) {
+                            val idPaciente = document.getLong("ID_PACIENTE") ?: 0L
+                            if (idPaciente != 0L) {
+                                pacientesIds.add(idPaciente)
+
+                                val cita = CitaReal(
+                                    ID_CITA = document.getLong("ID_CITA") ?: 0L,
+                                    ID_PACIENTE = idPaciente,
+                                    ID_MEDICO = document.getLong("ID_MEDICO") ?: 0L,
+                                    FECHA = document.getString("FECHA") ?: "",
+                                    HORA = document.getString("HORA") ?: "",
+                                    ESTADO = document.getString("ESTADO") ?: ""
+                                )
+                                citasCompletadas.add(cita)
+                            }
+                        }
+
+                        if (pacientesIds.isEmpty()) {
+                            mostrarLoadingIndicatorHistorial(container, false)
+                            mostrarEstadoVacioHistorial(container, "No hay pacientes completados")
+                            return@addOnSuccessListener
+                        }
+
+                        // Buscar información de los pacientes completados
+                        db.collection("pacientes")
+                            .whereIn("ID_PACIENTE", pacientesIds.toList())
+                            .get()
+                            .addOnSuccessListener { pacientesDocuments ->
+                                mostrarLoadingIndicatorHistorial(container, false)
+
+                                val pacientesMap = mutableMapOf<Long, PacienteReal>()
+                                for (document in pacientesDocuments) {
+                                    val paciente = PacienteReal(
+                                        ID_PACIENTE = getSafeLong(document, "ID_PACIENTE"),
+                                        NOMBRE = getSafeString(document, "NOMBRE"),
+                                        APELLIDO = getSafeString(document, "APELLIDO"),
+                                        CORREO = getSafeString(document, "CORREO"),
+                                        CELULAR = getSafeString(document, "CELULAR"),
+                                        DNI = getSafeString(document, "DNI"),
+                                        EDAD = 0,
+                                        SEXO = getSafeString(document, "SEXO")
+                                    )
+                                    pacientesMap[paciente.ID_PACIENTE] = paciente
+                                }
+
+                                // Mostrar pacientes completados
+                                for (cita in citasCompletadas) {
+                                    val paciente = pacientesMap[cita.ID_PACIENTE]
+                                    if (paciente != null) {
+                                        val itemView = LayoutInflater.from(this)
+                                            .inflate(R.layout.item_notification, container, false)
+
+                                        itemView.findViewById<TextView>(R.id.tvNotificationName).text =
+                                            "${paciente.NOMBRE} ${paciente.APELLIDO}"
+
+                                        itemView.findViewById<TextView>(R.id.tvNotificationType).text =
+                                            "✅ Completado - ${formatearFecha(cita.FECHA)} ${cita.HORA.substring(0, 5)}"
+
+                                        container.addView(itemView)
+                                    }
+                                }
+                            }
+                    }
+            }
+    }
+    /**
+     * Configura los botones de acción para cada paciente (WhatsApp, Gmail, Check)
+     */
+    private fun configurarBotonesPaciente(itemView: View, paciente: PacienteReal) {
+        // Botón de ChatRoom
+        val btnChatRoom = itemView.findViewById<ImageButton>(R.id.btnChatRoom)
+        btnChatRoom?.setOnClickListener {
+            abrirChatInterno(paciente)
+        }
+
+        // Botón de Gmail
+        val btnGmail = itemView.findViewById<ImageButton>(R.id.btnGmail)
+        btnGmail?.setOnClickListener {
+            abrirGmail(paciente)
+        }
+
+        // El botón Check ya está configurado por separado en cargarPacientesActivos
+    }
+    /**
+     * Abre el fragmento de chat interno de la app - VERSIÓN CORREGIDA CON DATOS REALES
+     */
+    private fun abrirChatInterno(paciente: PacienteReal) {
+        try {
+            Log.d("MainActivity", "🔹 Abriendo chat con: ${paciente.NOMBRE} ${paciente.APELLIDO}, ID: ${paciente.ID_PACIENTE}")
+
+            // 🔹 BUSCAR LA CITA REAL EN FIREBASE
+            obtenerCitaRealDelPaciente(paciente) { citaReal ->
+                if (citaReal != null) {
+                    Log.d("MainActivity", "✅ Cita real encontrada - ID: ${citaReal.ID_CITA}, Estado: ${citaReal.ESTADO}")
+
+                    val fragment = ChatRoomFragment().apply {
+                        arguments = Bundle().apply {
+                            putLong("id_cita", citaReal.ID_CITA) // 🔹 USAR ID REAL
+                            putLong("id_paciente", paciente.ID_PACIENTE)
+                            putString("nombre_paciente", "${paciente.NOMBRE} ${paciente.APELLIDO}")
+                            putString("especialidad", "Consulta General")
+                        }
+                    }
+
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.main_content_frame, fragment)
+                        .addToBackStack("chat_room")
+                        .commit()
+
+                    Log.d("MainActivity", "✅ Fragmento de chat abierto con cita REAL ID: ${citaReal.ID_CITA}")
+                    Toast.makeText(this, "Chat abierto con ${paciente.NOMBRE}", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.e("MainActivity", "❌ No se encontró cita real para el paciente")
+                    mostrarDialogoSinCitaReal(paciente)
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e("MainActivity", "❌ Error al abrir chat: ${e.message}", e)
+            Toast.makeText(this, "Error al abrir chat", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Obtiene la cita REAL del paciente desde Firebase
+     */
+    private fun obtenerCitaRealDelPaciente(paciente: PacienteReal, callback: (CitaReal?) -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            callback(null)
+            return
+        }
+
+        Log.d("MainActivity", "🔍 Buscando cita REAL para paciente: ${paciente.ID_PACIENTE}")
+
+        db.collection("medicos")
+            .document(currentUser.uid)
+            .get()
+            .addOnSuccessListener { medicoDoc ->
+                val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                if (idMedico == 0L) {
+                    Log.e("MainActivity", "ID_MEDICO es 0")
+                    callback(null)
+                    return@addOnSuccessListener
+                }
+
+                // Buscar citas REALES del paciente
+                db.collection("cita")
+                    .whereEqualTo("ID_PACIENTE", paciente.ID_PACIENTE)
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        Log.d("MainActivity", "📄 Citas reales encontradas: ${documents.size()}")
+
+                        if (documents.isEmpty) {
+                            Log.e("MainActivity", "❌ No hay citas reales para el paciente ${paciente.ID_PACIENTE}")
+                            callback(null)
+                            return@addOnSuccessListener
+                        }
+
+                        // Mostrar todas las citas para debug
+                        for (document in documents) {
+                            val idCita = document.getLong("ID_CITA") ?: 0L
+                            val estado = document.getString("ESTADO") ?: "sin estado"
+                            val fecha = document.getString("FECHA") ?: "sin fecha"
+                            val hora = document.getString("HORA") ?: "sin hora"
+
+                            Log.d("MainActivity", "📋 Cita - ID: $idCita, Estado: $estado, Fecha: $fecha, Hora: $hora")
+                        }
+
+                        // 🔹 BUSCAR PRIMERO CITA ACTIVA (no completada)
+                        var citaSeleccionada: CitaReal? = null
+                        for (document in documents) {
+                            val estado = document.getString("ESTADO") ?: ""
+                            val idCita = document.getLong("ID_CITA") ?: 0L
+
+                            if (estado != "completada" && idCita != 0L) {
+                                citaSeleccionada = CitaReal(
+                                    ID_CITA = idCita,
+                                    ID_PACIENTE = document.getLong("ID_PACIENTE") ?: 0L,
+                                    ID_MEDICO = document.getLong("ID_MEDICO") ?: 0L,
+                                    FECHA = document.getString("FECHA") ?: "",
+                                    HORA = document.getString("HORA") ?: "",
+                                    ESTADO = estado
+                                )
+                                Log.d("MainActivity", "✅ Cita activa seleccionada: ID=$idCita, Estado=$estado")
+                                break
+                            }
+                        }
+
+                        // 🔹 SI NO HAY CITA ACTIVA, USAR LA PRIMERA CITA ENCONTRADA
+                        if (citaSeleccionada == null && !documents.isEmpty) {
+                            val primeraCitaDoc = documents.documents.first()
+                            citaSeleccionada = CitaReal(
+                                ID_CITA = primeraCitaDoc.getLong("ID_CITA") ?: 0L,
+                                ID_PACIENTE = primeraCitaDoc.getLong("ID_PACIENTE") ?: 0L,
+                                ID_MEDICO = primeraCitaDoc.getLong("ID_MEDICO") ?: 0L,
+                                FECHA = primeraCitaDoc.getString("FECHA") ?: "",
+                                HORA = primeraCitaDoc.getString("HORA") ?: "",
+                                ESTADO = primeraCitaDoc.getString("ESTADO") ?: ""
+                            )
+                            Log.d("MainActivity", "⚠️ Usando primera cita encontrada: ID=${citaSeleccionada.ID_CITA}")
+                        }
+
+                        callback(citaSeleccionada)
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("MainActivity", "❌ Error al buscar citas reales: ${e.message}")
+                        callback(null)
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "❌ Error al obtener médico: ${e.message}")
+                callback(null)
+            }
+    }
+
+    /**
+     * Muestra diálogo cuando no se encuentra cita real
+     */
+    private fun mostrarDialogoSinCitaReal(paciente: PacienteReal) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Cita No Encontrada")
+        builder.setMessage("No se encontró una cita en la base de datos para el paciente ${paciente.NOMBRE} ${paciente.APELLIDO}.\n\nPuedes crear una cita nueva desde el calendario.")
+
+        builder.setPositiveButton("Crear Cita") { dialog, _ ->
+            // Navegar a calendario para crear nueva cita
+            displayContent(R.layout.content_calendars)
+            dialog.dismiss()
+        }
+
+        builder.setNegativeButton("Cancelar") { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        builder.show()
+    }
+    /**
+     * Abre Gmail para enviar correo al paciente
+     */
+    private fun abrirGmail(paciente: PacienteReal) {
+        try {
+            val email = paciente.CORREO.trim()
+
+            if (email.isEmpty()) {
+                Toast.makeText(this, "Correo electrónico no disponible", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:$email")
+                putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
+                putExtra(Intent.EXTRA_SUBJECT, "Consulta Médica")
+            }
+
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "No hay aplicación de correo instalada", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error al abrir correo: ${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e("MainActivity", "Error Gmail: ${e.message}")
+        }
+    }
+
 }
