@@ -34,32 +34,42 @@
         android:gravity="center_vertical"
         android:layout_marginStart="8dp">
 
-        <ImageView
+        <ImageButton
+            android:id="@+id/btnNotification"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/ic_notifications"
+            android:src="@drawable/ic_information"
             android:tint="#FFFFFF"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_marginStart="8dp" />
 
-        <ImageView
+        <ImageButton
+            android:id="@+id/btnChatRoom"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/ic_whatsapp"
+            android:src="@drawable/ic_chatroom"
             android:tint="#FFFFFF"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_marginStart="8dp" />
 
-        <ImageView
+        <ImageButton
+            android:id="@+id/btnGmail"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_email"
             android:tint="#FFFFFF"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_marginStart="8dp" />
 
-        <ImageView
+        <!-- 🔹 BOTÓN CHECK PARA MARCAR COMO COMPLETADO -->
+        <ImageButton
+            android:id="@+id/btnCheckComplete"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_check"
             android:tint="#FFFFFF"
-            android:layout_marginStart="8dp" />
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginStart="8dp"
+            android:contentDescription="Marcar como completado" />
     </LinearLayout>
 </LinearLayout>
