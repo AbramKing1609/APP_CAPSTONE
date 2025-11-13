@@ -95,23 +95,38 @@ class ChatRoomFragment : Fragment() {
 
         // Obtener datos de los arguments
         obtenerDatosArguments()
-
-        initFirebase()
-        setupBackPressHandler()
-        obtenerDatosMedico()
     }
 
     private fun obtenerDatosArguments() {
-        arguments?.let {
-            idCita = it.getLong(ARG_ID_CITA, 0L)
-            idPaciente = it.getLong(ARG_ID_PACIENTE, 0L)
-            nombrePaciente = it.getString(ARG_NOMBRE_PACIENTE, "")
-            especialidad = it.getString(ARG_ESPECIALIDAD, "")
-        }
+        try {
+            Log.d("ChatRoom", "🔹 Obteniendo datos desde arguments...")
 
-        if (idCita == 0L || idPaciente == 0L || nombrePaciente.isEmpty()) {
-            Toast.makeText(requireContext(), "Error: Datos de la cita incompletos", Toast.LENGTH_SHORT).show()
-            activity?.finish()
+            // 🔹 USAR ESTE MÉTODO QUE SÍ FUNCIONA
+            idCita = arguments?.getLong("id_cita") ?: 0L
+            idPaciente = arguments?.getLong("id_paciente") ?: 0L
+            nombrePaciente = arguments?.getString("nombre_paciente") ?: ""
+            especialidad = arguments?.getString("especialidad") ?: "Consulta General"
+
+            Log.d("ChatRoom", "📊 Datos cargados:")
+            Log.d("ChatRoom", "   • ID Cita: $idCita")
+            Log.d("ChatRoom", "   • ID Paciente: $idPaciente")
+            Log.d("ChatRoom", "   • Nombre: '$nombrePaciente'")
+            Log.d("ChatRoom", "   • Especialidad: '$especialidad'")
+
+            if (idCita != 0L && idPaciente != 0L && nombrePaciente.isNotEmpty()) {
+                Log.d("ChatRoom", "✅ Todos los datos están completos")
+                // Proceder con la inicialización
+                initFirebase()
+                setupBackPressHandler()
+                obtenerDatosMedico()
+            } else {
+                Log.e("ChatRoom", "❌ Datos incompletos")
+                mostrarErrorDatosIncompletos()
+            }
+
+        } catch (e: Exception) {
+            Log.e("ChatRoom", "💥 Error al obtener argumentos: ${e.message}", e)
+            mostrarErrorDatosIncompletos()
         }
     }
 
@@ -300,6 +315,15 @@ class ChatRoomFragment : Fragment() {
     }
 
     private fun listenToMessages() {
+        // 🔹 PREVENIR MÚLTIPLES LISTENERS
+        if (messagesListener != null) {
+            Log.w("ChatRoom", "⚠️ Ya existe un listener activo, removiendo...")
+            val messagesRef = realtimeDb.child("chatRooms").child(chatRoomId).child("messages")
+            messagesRef.removeEventListener(messagesListener!!)
+        }
+
+        Log.d("ChatRoom", "🎯 Creando NUEVO listener de mensajes")
+
         val messagesRef = realtimeDb.child("chatRooms").child(chatRoomId).child("messages")
 
         messagesListener = object : ChildEventListener {
@@ -667,4 +691,64 @@ class ChatRoomFragment : Fragment() {
 
         _binding = null
     }
+
+    private fun diagnosticarDatosRecibidos() {
+        Log.d("ChatRoom", "=== DIAGNÓSTICO DATOS RECIBIDOS ===")
+        Log.d("ChatRoom", "Arguments: ${arguments}")
+
+        arguments?.keySet()?.forEach { key ->
+            val value = when (val obj = arguments?.get(key)) {
+                is Long -> obj.toString()
+                is String -> obj
+                else -> obj?.toString() ?: "null"
+            }
+            Log.d("ChatRoom", "   $key: $value")
+        }
+
+        Log.d("ChatRoom", "idCita: $idCita")
+        Log.d("ChatRoom", "idPaciente: $idPaciente")
+        Log.d("ChatRoom", "nombrePaciente: $nombrePaciente")
+        Log.d("ChatRoom", "especialidad: $especialidad")
+        Log.d("ChatRoom", "=== FIN DIAGNÓSTICO ===")
+
+        if (idCita == 0L || idPaciente == 0L) {
+            Log.e("ChatRoom", "❌ ERROR: Datos incompletos detectados")
+            // Mostrar diálogo de error pero NO cerrar la app
+            mostrarErrorDatosIncompletos()
+        } else {
+            // Inicializar normalmente
+            initFirebase()
+            setupBackPressHandler()
+            obtenerDatosMedico()
+        }
+    }
+
+    private fun mostrarErrorDatosIncompletos() {
+        try {
+            val mensaje = """
+            No se pudieron cargar los datos del chat.
+            
+            Valores actuales:
+            • ID Cita: $idCita
+            • ID Paciente: $idPaciente
+            • Nombre: ${if (nombrePaciente.isEmpty()) "VACÍO" else nombrePaciente}
+            
+            Por favor, vuelve atrás e intenta nuevamente.
+        """.trimIndent()
+
+            AlertDialog.Builder(requireContext())
+                .setTitle("Error de Datos")
+                .setMessage(mensaje)
+                .setPositiveButton("Volver") { dialog, _ ->
+                    parentFragmentManager.popBackStack()
+                    dialog.dismiss()
+                }
+                .setCancelable(false)
+                .show()
+        } catch (e: Exception) {
+            Log.e("ChatRoom", "Error al mostrar diálogo, forzando regreso: ${e.message}")
+            parentFragmentManager.popBackStack()
+        }
+    }
+
 }

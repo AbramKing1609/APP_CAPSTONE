@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Historial de Notificaciones"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#000000"
+        android:gravity="center"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Filtro por fecha -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Filtrar por fecha:"
+            android:textSize="16sp"
+            android:textColor="#000000" />
+
+        <EditText
+            android:id="@+id/etFilterDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="DD/MM/AAAA"
+            android:background="@drawable/background_edittext"
+            android:padding="12dp"
+            android:textSize="14sp"
+            android:focusable="false"
+            android:clickable="true" />
+    </LinearLayout>
+
+    <!-- Botones de acción rápida -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="20dp">
+
+        <Button
+            android:id="@+id/btnToday"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Hoy"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/button_outline"
+            android:textColor="#03DAC5" />
+
+        <Button
+            android:id="@+id/btnYesterday"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Ayer"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/button_outline"
+            android:textColor="#03DAC5" />
+    </LinearLayout>
+
+    <!-- Lista de notificaciones filtradas -->
+    <TextView
+        android:id="@+id/tvHistoryTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Notificaciones del día seleccionado"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="#000000"
+        android:layout_marginBottom="12dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:background="@drawable/background_edittext">
+
+        <LinearLayout
+            android:id="@+id/containerHistory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp" />
+    </ScrollView>
+
+    <!-- Botones de acción -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="20dp">
+
+        <Button
+            android:id="@+id/btnClearFilter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Limpiar Filtro"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/button_outline"
+            android:textColor="#0B7BE3" />
+
+        <Button
+            android:id="@+id/btnCloseHistory"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Cerrar"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/button_primary"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+</LinearLayout>
