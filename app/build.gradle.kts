@@ -106,4 +106,10 @@ dependencies {
 // --- Robolectric para pruebas locales ---
     testImplementation("org.robolectric:robolectric:4.13")
     testRuntimeOnly("org.robolectric:robolectric:4.13")
+
+    // Firebase Cloud Messaging
+    implementation("com.google.firebase:firebase-messaging-ktx:24.0.0")
+
+    // WorkManager para notificaciones en segundo plano
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

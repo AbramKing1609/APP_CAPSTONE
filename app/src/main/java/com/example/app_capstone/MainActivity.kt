@@ -1,8 +1,18 @@
 package com.example.app_capstone
+import android.os.PowerManager
+import android.provider.Settings
 
+import android.os.Handler
+import android.os.Looper
 import android.app.DatePickerDialog
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -25,15 +35,24 @@ import com.google.firebase.firestore.FirebaseFirestore
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
+import android.widget.Switch
 import androidx.cardview.widget.CardView
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.recyclerview.widget.RecyclerView // Agregar esta importación
+import com.example.app_capstone.fcm.MyFirebaseMessagingService
+import com.example.app_capstone.fcm.NotificationDismissReceiver
 import com.example.app_capstone.ui.ChatRoom.ChatRoomFragment
+import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.messaging.FirebaseMessaging
 import java.lang.reflect.Array.set
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -54,27 +73,108 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnCalendars: LinearLayout
     private lateinit var btnLogout: LinearLayout
     private lateinit var mainContentFrame: FrameLayout
+    private lateinit var notificationManager: NotificationManager
+    private lateinit var notificationSwitch: Switch
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
-    private var estadoFiltroActual = "Todos" // Estado por defecto
-    // 🔹 VARIABLE GLOBAL para controlar qué se muestra
+    private var estadoFiltroActual = "Todos"
     private var mostrandoHistorial = false
     private var fechaFiltroHistorial: String? = null
+
+    // 🔹 VARIABLE PARA CONTROLAR REDIRECCIONES
+    private var isHandlingNotification = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        FirebaseApp.initializeApp(this)
+
         initViews()
         setupNavigation()
         setupLogoutButton()
-        checkCurrentUserAndShowHome()
 
-        // 🔹 VERIFICAR que esto se esté ejecutando
+        setupNotificationSystem()
+        checkNotificationPermission()
+
+        // 🔹 VERIFICAR REDIRECCIÓN ANTES DE CARGAR HOME
+        if (!handleDirectNotificationIntent(intent)) {
+            // Solo cargar home si NO viene de notificación
+            checkCurrentUserAndShowHome()
+        }
+
         Log.d("MainActivity", "onCreate - Configurando listener de citas")
         configurarListenerCitas()
     }
+
+    // 🔹 MANEJAR onNewIntent
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        Log.d("MainActivity", "📱 onNewIntent llamado")
+        setIntent(intent)
+        handleDirectNotificationIntent(intent)
+    }
+
+    // 🔹 FUNCIÓN MEJORADA - REDIRECCIÓN DIRECTA
+    private fun handleDirectNotificationIntent(intent: Intent): Boolean {
+        if (isHandlingNotification) {
+            Log.d("MainActivity", "⚠️ Ya se está manejando una notificación, ignorando")
+            return true
+        }
+
+        Log.d("MainActivity", "🔍 Analizando intent para redirección directa")
+
+        val openDirectlyTo = intent.getStringExtra("OPEN_DIRECTLY_TO")
+        val fromNotification = intent.getBooleanExtra("from_notification", false)
+
+        Log.d("MainActivity", "🎯 OPEN_DIRECTLY_TO: $openDirectlyTo, from_notification: $fromNotification")
+
+        // 🔹 REDIRECCIÓN DIRECTA A NOTIFICACIONES
+        if (openDirectlyTo == "NOTIFICATIONS" || fromNotification) {
+            Log.d("MainActivity", "🚀 REDIRECCIÓN DIRECTA A NOTIFICACIONES")
+            isHandlingNotification = true
+
+            // Pequeño delay para asegurar que la UI esté lista
+            Handler(Looper.getMainLooper()).postDelayed({
+                runOnUiThread {
+                    try {
+                        // 🔹 INICIALIZAR VISTAS SI NO LO ESTÁN
+                        if (!::btnNotifications.isInitialized) {
+                            initViews()
+                        }
+
+                        // 🔹 SELECCIONAR DIRECTAMENTE NOTIFICACIONES
+                        selectButton(btnNotifications)
+                        displayContent(R.layout.content_notifications)
+
+                        // 🔹 MOSTRAR MENSAJE
+                        val notificationTitle = intent.getStringExtra("notification_title")
+                        val toastMessage = if (!notificationTitle.isNullOrEmpty()) {
+                            "📩 $notificationTitle"
+                        } else {
+                            "📩 Tienes nuevas notificaciones"
+                        }
+
+                        Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show()
+                        Log.d("MainActivity", "✅ REDIRECCIÓN DIRECTA EXITOSA")
+
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "❌ Error en redirección directa: ${e.message}")
+                        // Fallback: cargar home normal
+                        checkCurrentUserAndShowHome()
+                    } finally {
+                        isHandlingNotification = false
+                    }
+                }
+            }, 800) // 🔹 Aumentar delay para mayor estabilidad
+
+            return true // 🔹 INDICAR QUE SE MANEJÓ LA REDIRECCIÓN
+        }
+
+        return false // 🔹 NO HAY REDIRECCIÓN, CONTINUAR NORMAL
+    }
+
 
     private fun initViews() {
         btnNotifications = findViewById(R.id.btnNotifications)
@@ -84,6 +184,7 @@ class MainActivity : AppCompatActivity() {
         btnLogout = findViewById(R.id.btnLogout)
         mainContentFrame = findViewById(R.id.main_content_frame)
     }
+
 
     private fun setupLogoutButton() {
         btnLogout.setOnClickListener {
@@ -138,6 +239,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 🔹 MODIFICAR checkCurrentUserAndShowHome para no interferir
     private fun checkCurrentUserAndShowHome() {
         val currentUser = auth.currentUser
         if (currentUser == null) {
@@ -145,10 +247,32 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Recuperar datos de Firestore y mostrar el contenido de home
-        loadHomeContent()
-    }
+        // 🔹 VERIFICAR SI HAY REDIRECCIÓN PENDIENTE
+        if (handleDirectNotificationIntent(intent)) {
+            Log.d("MainActivity", "🔔 Redirección a notificaciones detectada, omitiendo home")
+            return
+        }
 
+        // 🔹 SOLO CARGAR HOME SI NO HAY REDIRECCIÓN
+        val userId = currentUser.uid
+        db.collection("medicos").document(userId).get()
+            .addOnSuccessListener { document ->
+                val name = document.getString("NOMBRE") ?: "Doctor"
+                val lastName = document.getString("APELLIDO") ?: ""
+
+                // 🔹 VERIFICAR OTRA VEZ POR SI ACASO
+                if (!handleDirectNotificationIntent(intent)) {
+                    displayContent(R.layout.content_home, name, lastName)
+                    Log.d("MainActivity", "🏠 Contenido home cargado")
+                }
+            }
+            .addOnFailureListener {
+                if (!handleDirectNotificationIntent(intent)) {
+                    displayContent(R.layout.content_home, "Doctor", "")
+                    Log.d("MainActivity", "🏠 Contenido home cargado (fallback)")
+                }
+            }
+    }
     /**
      * Carga el contenido de home (content_home.xml) en el FrameLayout, recuperando los datos del usuario de Firestore.
      * Esto asegura que siempre se cargue con el nombre del doctor actualizado.
@@ -206,6 +330,59 @@ class MainActivity : AppCompatActivity() {
         val HORA: String = "",
         val ESTADO: String = ""
     )
+
+
+    private fun setupNotificationSystem() {
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                MyFirebaseMessagingService.CHANNEL_ID,
+                MyFirebaseMessagingService.CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH // 🔹 HIGH para persistencia
+            ).apply {
+                description = "Notificaciones de citas y pacientes - PERSISTENTES"
+                enableLights(true)
+                lightColor = android.graphics.Color.GREEN
+                enableVibration(true)
+                vibrationPattern = longArrayOf(1000, 800, 1000, 800)
+
+                // 🔹 CONFIGURACIÓN PARA PERSISTENCIA
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setShowBadge(true)
+                setBypassDnd(true) // Ignorar "No molestar"
+
+                // Para Android 8.0+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    setAllowBubbles(true)
+                }
+            }
+            notificationManager.createNotificationChannel(channel)
+            Log.d("MainActivity", "✅ Canal PERSISTENTE creado en MainActivity")
+        }
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    1001
+                )
+            } else {
+                Log.d("MainActivity", "✅ Permiso de notificaciones concedido")
+            }
+        }
+    }
+
     /**
      * Muestra el contenido del layout especificado en el FrameLayout principal.
      * @param layoutId El ID del layout a inflar.
@@ -311,8 +488,94 @@ class MainActivity : AppCompatActivity() {
                     loadHomeContent()
                 }
             }
+
+            R.layout.content_settings -> {
+                val btnChangePassword = newLayout.findViewById<Button>(R.id.btnChangePassword)
+                val btnAbout = newLayout.findViewById<Button>(R.id.btnAbout)
+                notificationSwitch = newLayout.findViewById<Switch>(R.id.swNotifications)
+
+                // Configurar el switch de notificaciones
+                setupNotificationSwitch()
+
+                btnChangePassword?.setOnClickListener {
+                    showChangePasswordDialog()
+                }
+
+                btnAbout?.setOnClickListener {
+                    showAboutDialog()
+                }
+            }
         }
     }
+
+    private fun setupNotificationSwitch() {
+        // Verificar el estado actual de las notificaciones
+        val areNotificationsEnabled = areNotificationsEnabled()
+        notificationSwitch.isChecked = areNotificationsEnabled
+
+        notificationSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                enableNotifications()
+            } else {
+                disableNotifications()
+            }
+        }
+    }
+
+    private fun areNotificationsEnabled(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = notificationManager.getNotificationChannel(MyFirebaseMessagingService.CHANNEL_ID)
+            channel?.importance != NotificationManager.IMPORTANCE_NONE
+        } else {
+            NotificationManagerCompat.from(this).areNotificationsEnabled()
+        }
+    }
+
+    private fun enableNotifications() {
+        // Suscribirse a temas FCM
+        FirebaseMessaging.getInstance().subscribeToTopic("medical_app")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("MainActivity", "Suscripción a notificaciones exitosa")
+
+                    // 🔹 OPTIMIZACIÓN PARA ANDROID 6.0+ (DOZE MODE)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                            // Solicitar exclusión de optimización de batería
+                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                            intent.data = Uri.parse("package:$packageName")
+                            try {
+                                startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "No se pudo solicitar exclusión de batería: ${e.message}")
+                            }
+                        }
+                    }
+
+                    Toast.makeText(this, "Notificaciones activadas", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.e("MainActivity", "Error al suscribirse a notificaciones")
+                    notificationSwitch.isChecked = false
+                }
+            }
+    }
+
+    private fun disableNotifications() {
+        // Cancelar suscripción a temas FCM
+        FirebaseMessaging.getInstance().unsubscribeFromTopic("medical_app")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("MainActivity", "Notificaciones desactivadas")
+                    Toast.makeText(this, "Notificaciones desactivadas", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.e("MainActivity", "Error al desactivar notificaciones")
+                    notificationSwitch.isChecked = true
+                }
+            }
+    }
+
+
     // 🔹 NUEVA FUNCIÓN: Configurar el Spinner de filtro
     private fun configurarFiltroEstados(spinner: Spinner, containerSchedule: LinearLayout) {
         // 🔹 CORRECCIÓN: Agregar "Completada" al filtro
@@ -419,8 +682,147 @@ class MainActivity : AppCompatActivity() {
             .addOnFailureListener { e ->
                 Log.e("MainActivity", "Error al obtener médico: ${e.message}")
             }
+        // Además, enviar notificación push local
+        enviarNotificacionLocal(cita, paciente, tipo)
     }
 
+    private fun enviarNotificacionLocal(cita: CitaReal, paciente: PacienteReal, tipo: String) {
+        val (titulo, mensaje) = when (tipo) {
+            "nueva_cita" -> Pair("📋 Nueva Cita", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
+            "cita_reservada" -> Pair("✅ Cita Confirmada", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
+            "cita_cancelada" -> Pair("❌ Cita Cancelada", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
+            "cita_completada" -> Pair("🏁 Cita Completada", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
+            else -> Pair("Notificación Médica", "Actualización de cita")
+        }
+
+        // Intent directo a notificaciones
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra("OPEN_DIRECTLY_TO", "NOTIFICATIONS")
+            putExtra("from_notification", true)
+            putExtra("notification_title", titulo)
+            action = "OPEN_NOTIFICATIONS_${System.currentTimeMillis()}"
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            System.currentTimeMillis().toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Intent para eliminar notificación
+        val dismissIntent = Intent(this, NotificationDismissReceiver::class.java).apply {
+            putExtra("notification_id", System.currentTimeMillis().toInt())
+        }
+        val dismissPendingIntent = PendingIntent.getBroadcast(
+            this,
+            System.currentTimeMillis().toInt(),
+            dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // 🔹 NOTIFICACIÓN ONGOING (PERSISTENTE)
+        val notification = NotificationCompat.Builder(this, MyFirebaseMessagingService.CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(titulo)
+            .setContentText(mensaje)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setOngoing(true) // 🔹 CRÍTICO: Hacerla persistente
+            .setTimeoutAfter(0) // Nunca se auto-elimina
+            .setWhen(System.currentTimeMillis())
+            .setShowWhen(true)
+            .setColor(ContextCompat.getColor(this, R.color.colorPrimary))
+            .addAction(R.drawable.ic_notification, "Eliminar", dismissPendingIntent)
+            .build()
+
+        val notificationId = System.currentTimeMillis().toInt()
+        notificationManager.notify(notificationId, notification)
+
+        Log.d("MainActivity", "🔔 Notificación ONGOING enviada - ID: $notificationId")
+
+        // 🔹 CREAR SEGUNDA NOTIFICACIÓN NORMAL (opcional)
+        crearNotificacionNormal(titulo, mensaje, intent)
+    }
+    // 🔹 NOTIFICACIÓN NORMAL COMO RESPALDO
+    private fun crearNotificacionNormal(titulo: String, mensaje: String, intent: Intent) {
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            System.currentTimeMillis().toInt() + 1, // ID diferente
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val normalNotification = NotificationCompat.Builder(this, MyFirebaseMessagingService.CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("$titulo (Info)")
+            .setContentText(mensaje)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setOngoing(false) // No persistente
+            .build()
+
+        val normalNotificationId = System.currentTimeMillis().toInt() + 1
+        notificationManager.notify(normalNotificationId, normalNotification)
+
+        Log.d("MainActivity", "🔔 Notificación normal de respaldo enviada - ID: $normalNotificationId")
+    }
+
+    // 🔹 FUNCIÓN DE PRUEBA PARA NOTIFICACIONES PERSISTENTES
+    private fun testPersistentNotification() {
+        Log.d("MainActivity", "🧪 TEST: Probando notificación PERSISTENTE...")
+
+        val testIntent = Intent(this, MainActivity::class.java).apply {
+            putExtra("OPEN_DIRECTLY_TO", "NOTIFICATIONS")
+            putExtra("from_notification", true)
+            putExtra("notification_title", "🧪 Notificación PERSISTENTE")
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            System.currentTimeMillis().toInt(),
+            testIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Notificación de prueba PERSISTENTE
+        val notification = NotificationCompat.Builder(this, MyFirebaseMessagingService.CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("🧪 Notificación PERSISTENTE")
+            .setContentText("Esta notificación debería permanecer en pantalla de bloqueo")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setOngoing(false)
+            .setTimeoutAfter(0) // 🔹 NO se auto-elimina
+            .setWhen(System.currentTimeMillis())
+            .setShowWhen(true)
+            .build()
+
+        val notificationId = 9999 // ID fijo para pruebas
+        notificationManager.notify(notificationId, notification)
+
+        Log.d("MainActivity", "🧪 Notificación PERSISTENTE de prueba enviada - ID: $notificationId")
+        Toast.makeText(this, "Notificación persistente enviada", Toast.LENGTH_SHORT).show()
+    }
+
+// Llama a esta función desde onCreate para probar:
+// testPersistentNotification()
+
+// Llama a esta función desde onCreate para probar:
+// testNotificationRedirect()
     /**
      * Valida si un paciente ya tiene una cita con el mismo médico en la misma fecha
      * RETORNA: true si ya existe una cita (y cuál es la cita existente), false si no existe
