@@ -1,6 +1,7 @@
 package com.example.app_capstone
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -8,6 +9,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -20,6 +22,7 @@ import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.functions.FirebaseFunctionsException
 import com.google.firebase.functions.functions
 import okhttp3.*
 import org.json.JSONObject
@@ -318,6 +321,8 @@ class RegisterActivity : AppCompatActivity() {
             val email = formData["CORREO"] as String
             val password = lastFragment.getPassword()
             val aceptoTerminos = formData["TERMINOSACEPTADO"] as? Boolean ?: false
+            val nombre = formData["NOMBRE"] as String
+            val apellido = formData["APELLIDO"] as String
 
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener { authTask ->
@@ -361,7 +366,10 @@ class RegisterActivity : AppCompatActivity() {
                                                 db.collection("doctor_hospital").document()
                                                     .set(doctorHospitalData)
                                                     .addOnSuccessListener {
-                                                        Toast.makeText(this, "Registro exitoso", Toast.LENGTH_SHORT).show()
+                                                        // ✅ TERCERO: Enviar email de vinculación con MercadoPago
+                                                        enviarEmailVinculacionMercadoPago(uid, nextId, nombre, apellido, email)
+
+                                                        Toast.makeText(this, "Registro exitoso. Revisa tu correo para vincular MercadoPago.", Toast.LENGTH_LONG).show()
                                                         startActivity(Intent(this, LoginActivity::class.java))
                                                         finish()
                                                     }
@@ -391,6 +399,145 @@ class RegisterActivity : AppCompatActivity() {
                     }
                 }
         }
+    }
+
+    // Nueva función para enviar email de vinculación
+    private fun enviarEmailVinculacionMercadoPago(uid: String, doctorId: Int, nombre: String, apellido: String, email: String) {
+        Log.d("EmailVinculacion", "🚀 Iniciando envío de email DIRECTO")
+
+        // Generar token y URL de vinculación
+        val token = "${uid}_${System.currentTimeMillis()}"
+        val vinculacionUrl = "https://us-central1-consultasperu-262df.cloudfunctions.net/vincularMercadoPago?token=$token"
+
+        Log.d("EmailVinculacion", "🔗 URL generada: $vinculacionUrl")
+
+        // Guardar token en Firestore
+        guardarTokenEnFirestore(uid, doctorId, token)
+
+        // ENVIAR EMAIL DIRECTAMENTE CON EMAILJS
+        EmailVinculacionService.enviarEmailVinculacion(
+            toEmail = email,
+            nombre = nombre,
+            apellido = apellido,
+            vinculacionUrl = vinculacionUrl,
+            onSuccess = {
+                runOnUiThread {
+                    Log.d("EmailVinculacion", "🎉 Email enviado EXITOSAMENTE")
+                    Toast.makeText(this, "✅ Email de vinculación enviado. Revisa tu bandeja de entrada.", Toast.LENGTH_LONG).show()
+                    irALogin()
+                }
+            },
+            onError = { error ->
+                runOnUiThread {
+                    Log.e("EmailVinculacion", "❌ Falló el envío: $error")
+
+                    // INTENTAR UNA SEGUNDA VEZ automáticamente
+                    Toast.makeText(this, "Reintentando envío...", Toast.LENGTH_SHORT).show()
+                    reintentarEnvioEmail(email, nombre, apellido, vinculacionUrl)
+                }
+            }
+        )
+    }
+
+    private fun reintentarEnvioEmail(email: String, nombre: String, apellido: String, vinculacionUrl: String) {
+        EmailVinculacionService.enviarEmailVinculacion(
+            toEmail = email,
+            nombre = nombre,
+            apellido = apellido,
+            vinculacionUrl = vinculacionUrl,
+            onSuccess = {
+                runOnUiThread {
+                    Log.d("EmailVinculacion", "🎉 Email enviado en segundo intento")
+                    Toast.makeText(this, "✅ Email de vinculación enviado.", Toast.LENGTH_LONG).show()
+                    irALogin()
+                }
+            },
+            onError = { error ->
+                runOnUiThread {
+                    Log.e("EmailVinculacion", "❌ Falló el segundo intento: $error")
+
+                    // TERCER INTENTO como último recurso
+                    tercerIntentoEnvio(email, nombre, apellido, vinculacionUrl)
+                }
+            }
+        )
+    }
+
+    private fun tercerIntentoEnvio(email: String, nombre: String, apellido: String, vinculacionUrl: String) {
+        // Pequeño delay antes del tercer intento
+        android.os.Handler().postDelayed({
+            EmailVinculacionService.enviarEmailVinculacion(
+                toEmail = email,
+                nombre = nombre,
+                apellido = apellido,
+                vinculacionUrl = vinculacionUrl,
+                onSuccess = {
+                    runOnUiThread {
+                        Log.d("EmailVinculacion", "🎉 Email enviado en tercer intento")
+                        Toast.makeText(this, "✅ Email de vinculación enviado.", Toast.LENGTH_LONG).show()
+                        irALogin()
+                    }
+                },
+                onError = { error ->
+                    runOnUiThread {
+                        Log.e("EmailVinculacion", "❌ Falló después de 3 intentos: $error")
+                        // Aunque falle, el usuario puede continuar
+                        Toast.makeText(this, "Registro completado. Podrás vincular MercadoPago después.", Toast.LENGTH_LONG).show()
+                        irALogin()
+                    }
+                }
+            )
+        }, 2000) // 2 segundos de delay
+    }
+
+    private fun guardarTokenEnFirestore(uid: String, doctorId: Int, token: String) {
+        val tokenData = hashMapOf(
+            "uid" to uid,
+            "doctorId" to doctorId,
+            "token" to token,
+            "usado" to false,
+            "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+            "expiresAt" to java.util.Date(System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000) // 7 días
+        )
+
+        FirebaseFirestore.getInstance().collection("tokens_vinculacion_mp")
+            .add(tokenData)
+            .addOnSuccessListener {
+                Log.d("EmailVinculacion", "✅ Token guardado en Firestore")
+            }
+            .addOnFailureListener { e ->
+                Log.e("EmailVinculacion", "❌ Error guardando token: ${e.message}")
+            }
+    }
+
+    private fun irALogin() {
+        val intent = Intent(this, LoginActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
+
+    //Funcion para el mercadoPago
+    fun mostrarDialogoMercadoPago() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_mercadopago_simple, null)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        dialogView.findViewById<Button>(R.id.btnIrMercadoPago).setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.mercadopago.com.pe/registration-mp"))
+            startActivity(intent)
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<Button>(R.id.btnCancelar).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     // Función para obtener el siguiente ID numérico

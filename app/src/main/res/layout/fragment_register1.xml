@@ -101,6 +101,31 @@
                 android:textColor="#1A232A"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- NUEVO: Checkbox MercadoPago -->
+        <CheckBox
+            android:id="@+id/checkboxMercadoPago"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tengo cuenta en MercadoPago"
+            android:textSize="15sp"
+            android:textColor="#2d3748"
+            android:fontFamily="@font/comfortaa"
+            android:layout_marginBottom="12dp" />
+
+        <!--NUEVO: Link para crear cuenta (VISIBLE por defecto) -->
+        <TextView
+            android:id="@+id/tvCrearCuentaMP"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="¿No tienes cuenta? Créala aquí"
+            android:textSize="14sp"
+            android:textColor="#009ee3"
+            android:textStyle="bold"
+            android:fontFamily="@font/comfortaa"
+            android:padding="12dp"
+            android:visibility="visible"
+            android:background="?attr/selectableItemBackground" />
+
         <!-- Campo Correo -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilEmail"

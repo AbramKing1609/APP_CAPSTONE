@@ -8,7 +8,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.google.android.material.textfield.TextInputLayout
@@ -53,6 +55,9 @@ class RegisterFragment1 : Fragment(), RegisterActivity.RegisterFragmentInterface
     private lateinit var actvNacionalidad: AutoCompleteTextView
     private lateinit var functions: FirebaseFunctions
 
+    private lateinit var checkboxMercadoPago: CheckBox
+    private lateinit var tvCrearCuentaMP: TextView
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -65,6 +70,10 @@ class RegisterFragment1 : Fragment(), RegisterActivity.RegisterFragmentInterface
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         functions = Firebase.functions
+
+        // 🔹 AGREGAR ESTA LÍNEA: Configurar los listeners del checkbox y TextView
+        setupListeners()
+
         // Carga de Distritos (Collection: 'distrito', Display: 'NOMBRE_DISTRITO', ID: 'ID_DISTRITO')
         loadDropdownData(
             collectionName = "distrito",
@@ -106,6 +115,9 @@ class RegisterFragment1 : Fragment(), RegisterActivity.RegisterFragmentInterface
         etAge = view.findViewById(R.id.etAge)
         actvDistrito = view.findViewById(R.id.actvDistrito)
         actvNacionalidad = view.findViewById(R.id.actvNacionalidad)
+
+        checkboxMercadoPago = view.findViewById(R.id.checkboxMercadoPago)
+        tvCrearCuentaMP = view.findViewById(R.id.tvCrearCuentaMP)
     }
 
     /**
@@ -150,6 +162,21 @@ class RegisterFragment1 : Fragment(), RegisterActivity.RegisterFragmentInterface
             }
     }
 
+    private fun setupListeners() {
+        checkboxMercadoPago.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                tilEmail.visibility = View.VISIBLE
+                tvCrearCuentaMP.visibility = View.GONE
+            } else {
+                tilEmail.visibility = View.GONE
+                tvCrearCuentaMP.visibility = View.VISIBLE
+                etEmail.setText("")
+            }
+        }
+        tvCrearCuentaMP.setOnClickListener {
+            (activity as? RegisterActivity)?.mostrarDialogoMercadoPago()
+        }
+    }
 
     override fun validateFields(): Boolean {
         var isValid = true
@@ -171,14 +198,24 @@ class RegisterFragment1 : Fragment(), RegisterActivity.RegisterFragmentInterface
             isValid = false
         } else tilDni.error = null
 
+        // 🔹 VALIDACIÓN DEL CHECKBOX MERCADOPAGO
+        if (!checkboxMercadoPago.isChecked) {
+            Toast.makeText(requireContext(), "Debes tener cuenta en MercadoPago para registrarte", Toast.LENGTH_LONG).show()
+            isValid = false
+        }
+
         val email = etEmail.text.toString()
-        if (email.isEmpty()) {
-            tilEmail.error = "Campo obligatorio"
-            isValid = false
-        } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            tilEmail.error = "Email inválido"
-            isValid = false
-        } else tilEmail.error = null
+        if (checkboxMercadoPago.isChecked) {
+
+            if (email.isEmpty()) {
+                tilEmail.error = "Campo obligatorio"
+                isValid = false
+            } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                tilEmail.error = "Email inválido"
+                isValid = false
+            }
+            else tilEmail.error = null
+        }
 
         val celular = etCelular.text.toString()
         if (celular.isEmpty()) {

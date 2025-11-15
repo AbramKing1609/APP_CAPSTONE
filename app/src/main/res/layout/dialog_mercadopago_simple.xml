@@ -1,0 +1,73 @@
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="32dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Icono -->
+        <ImageView
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/ic_mercadopago_logo"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="MercadoPago" />
+
+        <!-- Título -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Necesitas cuenta en MercadoPago"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#2d3748"
+            android:gravity="center"
+            android:fontFamily="@font/comfortaa"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Descripción -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Para recibir pagos, necesitas una cuenta en MercadoPago. Es gratis y toma solo 2 minutos."
+            android:textSize="14sp"
+            android:textColor="#4a5568"
+            android:gravity="center"
+            android:fontFamily="@font/comfortaa"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Botón Ir a MercadoPago -->
+        <Button
+            android:id="@+id/btnIrMercadoPago"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="Ir a MercadoPago"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="#009ee3"
+            android:fontFamily="@font/comfortaa"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Botón Cancelar -->
+        <Button
+            android:id="@+id/btnCancelar"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="Cancelar"
+            android:textColor="#4a5568"
+            android:textSize="16sp"
+            android:backgroundTint="#E2E8F0"
+            android:fontFamily="@font/comfortaa" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
