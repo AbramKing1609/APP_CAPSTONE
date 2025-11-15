@@ -179,6 +179,7 @@ class MainActivity : AppCompatActivity() {
     // Agregar estas clases de datos al inicio del archivo
     data class PacienteReal(
         val ID_PACIENTE: Long = 0L,
+        val ID_USUARIO: Long = 0L, // 🔹 NUEVO CAMPO
         val NOMBRE: String = "",
         val APELLIDO: String = "",
         val CORREO: String = "",
@@ -603,6 +604,7 @@ class MainActivity : AppCompatActivity() {
                                                                         val pacienteDoc = pacientes.documents.first()
                                                                         val paciente = PacienteReal(
                                                                             ID_PACIENTE = pacienteDoc.getLong("ID_PACIENTE") ?: 0L,
+                                                                            //ID_USUARIO = getSafeLong(pacienteDoc, "ID_USUARIO"), // ← AGREGAR ESTO
                                                                             NOMBRE = pacienteDoc.getString("NOMBRE") ?: "",
                                                                             APELLIDO = pacienteDoc.getString("APELLIDO") ?: "",
                                                                             CORREO = pacienteDoc.getString("CORREO") ?: "",
@@ -739,6 +741,7 @@ class MainActivity : AppCompatActivity() {
 
                     val paciente = PacienteReal(
                         ID_PACIENTE = getSafeLong(pacienteDoc, "ID_PACIENTE"),
+                        //ID_USUARIO = getSafeLong(pacienteDoc, "ID_USUARIO"), // ← AGREGAR ESTO
                         NOMBRE = getSafeString(pacienteDoc, "NOMBRE"),
                         APELLIDO = getSafeString(pacienteDoc, "APELLIDO"),
                         CORREO = getSafeString(pacienteDoc, "CORREO"),
@@ -959,6 +962,7 @@ class MainActivity : AppCompatActivity() {
 
                                         val paciente = PacienteReal(
                                             ID_PACIENTE = getSafeLong(document, "ID_PACIENTE"),
+                                            ID_USUARIO = getSafeLong(document, "ID_USUARIO"), // ← Esto es importante
                                             NOMBRE = getSafeString(document, "NOMBRE"),
                                             APELLIDO = getSafeString(document, "APELLIDO"),
                                             CORREO = getSafeString(document, "CORREO"),
@@ -2230,6 +2234,7 @@ class MainActivity : AppCompatActivity() {
                                     try {
                                         val paciente = PacienteReal(
                                             ID_PACIENTE = getSafeLong(document, "ID_PACIENTE"),
+                                            ID_USUARIO = getSafeLong(document, "ID_USUARIO"), // ← Esto es importante
                                             NOMBRE = getSafeString(document, "NOMBRE"),
                                             APELLIDO = getSafeString(document, "APELLIDO"),
                                             CORREO = getSafeString(document, "CORREO"),
@@ -2977,6 +2982,7 @@ class MainActivity : AppCompatActivity() {
                                 for (document in pacientesDocuments) {
                                     val paciente = PacienteReal(
                                         ID_PACIENTE = getSafeLong(document, "ID_PACIENTE"),
+                                        //ID_USUARIO = getSafeLong(document, "ID_USUARIO"), // ← Esto es importante
                                         NOMBRE = getSafeString(document, "NOMBRE"),
                                         APELLIDO = getSafeString(document, "APELLIDO"),
                                         CORREO = getSafeString(document, "CORREO"),
@@ -3012,6 +3018,11 @@ class MainActivity : AppCompatActivity() {
      * Configura los botones de acción para cada paciente (WhatsApp, Gmail, Check)
      */
     private fun configurarBotonesPaciente(itemView: View, paciente: PacienteReal) {
+        // 🔹 NUEVO: Botón de Información
+        val btnInfo = itemView.findViewById<ImageButton>(R.id.btnNotification)
+        btnInfo?.setOnClickListener {
+            mostrarInformacionCompletaPaciente(paciente)
+        }
         // Botón de ChatRoom
         val btnChatRoom = itemView.findViewById<ImageButton>(R.id.btnChatRoom)
         btnChatRoom?.setOnClickListener {
@@ -3209,4 +3220,250 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Muestra toda la información del paciente en un diálogo emergente (SIN ÍNDICE)
+     */
+    private fun mostrarInformacionCompletaPaciente(paciente: PacienteReal) {
+        try {
+            // Buscar información adicional de la cita del paciente
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
+                db.collection("medicos")
+                    .document(currentUser.uid)
+                    .get()
+                    .addOnSuccessListener { medicoDoc ->
+                        val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                        if (idMedico != 0L) {
+                            // 🔹 CONSULTA SIMPLIFICADA - Solo por ID_MEDICO para evitar índice compuesto
+                            db.collection("cita")
+                                .whereEqualTo("ID_MEDICO", idMedico)
+                                .get()
+                                .addOnSuccessListener { citas ->
+                                    // Filtrar localmente por ID_PACIENTE y ordenar por fecha
+                                    val citasDelPaciente = citas.documents
+                                        .filter { doc ->
+                                            doc.getLong("ID_PACIENTE") == paciente.ID_PACIENTE
+                                        }
+                                        .sortedByDescending { doc ->
+                                            doc.getString("FECHA") ?: ""
+                                        }
+
+                                    // 🔹 BUSCAR CORREO EN TABLA USUARIO
+                                    buscarCorreoUsuario(paciente.ID_USUARIO) { correo ->
+                                        if (citasDelPaciente.isNotEmpty()) {
+                                            val citaDoc = citasDelPaciente.first()
+                                            val estadoCita = citaDoc.getString("ESTADO") ?: "No disponible"
+                                            val fechaCita = citaDoc.getString("FECHA") ?: "No disponible"
+                                            val horaCita = citaDoc.getString("HORA") ?: "No disponible"
+                                            val fechaFinConsulta = citaDoc.getTimestamp("FECHA_FIN_CONSULTA")
+
+                                            // Formatear la fecha si es necesario
+                                            val fechaFormateada = formatearFecha(fechaCita)
+
+                                            // Formatear la hora si es necesaria
+                                            val horaFormateada = if (horaCita.length >= 5) {
+                                                horaCita.substring(0, 5)
+                                            } else {
+                                                horaCita
+                                            }
+
+                                            // Formatear fecha de fin de consulta si existe
+                                            val fechaFinFormateada = if (fechaFinConsulta != null) {
+                                                try {
+                                                    val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                                                    dateFormat.format(fechaFinConsulta.toDate())
+                                                } catch (e: Exception) {
+                                                    "No disponible"
+                                                }
+                                            } else {
+                                                "No disponible"
+                                            }
+
+                                            // Mostrar el diálogo con toda la información
+                                            mostrarDialogoInformacionCompleta(
+                                                paciente,
+                                                estadoCita,
+                                                fechaFormateada,
+                                                horaFormateada,
+                                                fechaFinFormateada,
+                                                correo
+                                            )
+                                        } else {
+                                            // No se encontraron citas para este paciente
+                                            mostrarDialogoInformacionCompleta(
+                                                paciente,
+                                                "Sin cita",
+                                                "No disponible",
+                                                "No disponible",
+                                                "No disponible",
+                                                correo
+                                            )
+                                        }
+                                    }
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("MainActivity", "Error al buscar citas: ${e.message}")
+                                    // Buscar correo incluso si hay error en citas
+                                    buscarCorreoUsuario(paciente.ID_USUARIO) { correo ->
+                                        mostrarDialogoInformacionCompleta(
+                                            paciente,
+                                            "Error al cargar",
+                                            "No disponible",
+                                            "No disponible",
+                                            "No disponible",
+                                            correo
+                                        )
+                                    }
+                                }
+                        } else {
+                            buscarCorreoUsuario(paciente.ID_USUARIO) { correo ->
+                                mostrarDialogoInformacionCompleta(
+                                    paciente,
+                                    "ID Médico no disponible",
+                                    "No disponible",
+                                    "No disponible",
+                                    "No disponible",
+                                    correo
+                                )
+                            }
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("MainActivity", "Error al obtener médico: ${e.message}")
+                        buscarCorreoUsuario(paciente.ID_USUARIO) { correo ->
+                            mostrarDialogoInformacionCompleta(
+                                paciente,
+                                "Error médico",
+                                "No disponible",
+                                "No disponible",
+                                "No disponible",
+                                correo
+                            )
+                        }
+                    }
+            } else {
+                buscarCorreoUsuario(paciente.ID_USUARIO) { correo ->
+                    mostrarDialogoInformacionCompleta(
+                        paciente,
+                        "Usuario no autenticado",
+                        "No disponible",
+                        "No disponible",
+                        "No disponible",
+                        correo
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error al mostrar información del paciente: ${e.message}")
+            buscarCorreoUsuario(paciente.ID_USUARIO) { correo ->
+                mostrarDialogoInformacionCompleta(
+                    paciente,
+                    "Error general",
+                    "No disponible",
+                    "No disponible",
+                    "No disponible",
+                    correo
+                )
+            }
+        }
+    }
+
+    /**
+     * Busca el correo del paciente en la tabla usuario usando ID_USUARIO
+     */
+    private fun buscarCorreoUsuario(idUsuario: Long, callback: (String) -> Unit) {
+        if (idUsuario == 0L) {
+            callback("No especificado")
+            return
+        }
+
+        db.collection("usuario")
+            .whereEqualTo("ID_USUARIO", idUsuario)
+            .get()
+            .addOnSuccessListener { documentos ->
+                if (!documentos.isEmpty) {
+                    val usuarioDoc = documentos.documents.first()
+                    val correo = usuarioDoc.getString("CORREO") ?: "No especificado"
+                    callback(correo)
+                } else {
+                    callback("No especificado")
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error al buscar correo: ${e.message}")
+                callback("No especificado")
+            }
+    }
+
+    /**
+     * Muestra un diálogo con toda la información del paciente (VERSIÓN MEJORADA CON LAYOUT)
+     */
+    private fun mostrarDialogoInformacionCompleta(
+        paciente: PacienteReal,
+        estadoCita: String,
+        fechaCita: String,
+        horaCita: String,
+        fechaFinConsulta: String,
+        correoUsuario: String
+    ) {
+        // Inflar el layout personalizado
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_patient_info, null)
+
+        val builder = AlertDialog.Builder(this)
+        builder.setView(dialogView)
+
+        // Referencias a las vistas
+        val tvNombre = dialogView.findViewById<TextView>(R.id.tvNombre)
+        val tvDni = dialogView.findViewById<TextView>(R.id.tvDni)
+        val tvEdad = dialogView.findViewById<TextView>(R.id.tvEdad)
+        val tvSexo = dialogView.findViewById<TextView>(R.id.tvSexo)
+        val tvCelular = dialogView.findViewById<TextView>(R.id.tvCelular)
+        val tvCorreo = dialogView.findViewById<TextView>(R.id.tvCorreo)
+        val tvEstadoCita = dialogView.findViewById<TextView>(R.id.tvEstadoCita)
+        val tvFechaCita = dialogView.findViewById<TextView>(R.id.tvFechaCita)
+        val tvHoraCita = dialogView.findViewById<TextView>(R.id.tvHoraCita)
+        val tvFinConsulta = dialogView.findViewById<TextView>(R.id.tvFinConsulta)
+
+        // Configurar los datos
+        tvNombre.text = "Nombre: ${paciente.NOMBRE} ${paciente.APELLIDO}"
+        tvDni.text = "DNI: ${if (paciente.DNI.isNotEmpty()) paciente.DNI else "No especificado"}"
+        tvEdad.text = "Edad: ${if (paciente.EDAD > 0) "${paciente.EDAD} años" else "No especificada"}"
+        tvSexo.text = "Sexo: ${if (paciente.SEXO.isNotEmpty()) paciente.SEXO else "No especificado"}"
+        tvCelular.text = "Celular: ${if (paciente.CELULAR.isNotEmpty()) paciente.CELULAR else "No especificado"}"
+        tvCorreo.text = "Correo: $correoUsuario"
+
+        // Determinar color del estado
+        val (colorEstado, emojiEstado) = when (estadoCita.toLowerCase(Locale.getDefault())) {
+            "confirmada", "reservada" -> Pair("#4CAF50", "✅") // Verde
+            "pendiente" -> Pair("#FF9800", "⏳")  // Naranja
+            "completada" -> Pair("#2196F3", "🏁") // Azul
+            "cancelada" -> Pair("#F44336", "❌")  // Rojo
+            else -> Pair("#9E9E9E", "📝")         // Gris
+        }
+
+        tvEstadoCita.text = "Estado: $emojiEstado $estadoCita"
+        tvEstadoCita.setTextColor(Color.parseColor(colorEstado))
+
+        tvFechaCita.text = "Fecha: $fechaCita"
+        tvHoraCita.text = "Hora: $horaCita"
+
+        // Mostrar fin de consulta solo si está disponible
+        if (fechaFinConsulta != "No disponible") {
+            tvFinConsulta.text = "Fin Consulta: $fechaFinConsulta"
+            tvFinConsulta.visibility = View.VISIBLE
+        } else {
+            tvFinConsulta.visibility = View.GONE
+        }
+
+        // Solo botón de cerrar
+        builder.setPositiveButton("Cerrar") { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        val dialog = builder.create()
+        dialog.show()
+
+        // Personalizar el botón
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
+    }
 }
