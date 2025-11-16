@@ -3672,32 +3672,84 @@ class MainActivity : AppCompatActivity() {
         builder.show()
     }
     /**
-     * Abre Gmail para enviar correo al paciente
+     * Abre Gmail para enviar correo al paciente - VERSIÓN CORREGIDA
      */
     private fun abrirGmail(paciente: PacienteReal) {
         try {
-            val email = paciente.CORREO.trim()
+            Log.d("MainActivity", "📧 Intentando abrir Gmail para: ${paciente.NOMBRE} ${paciente.APELLIDO}")
 
-            if (email.isEmpty()) {
-                Toast.makeText(this, "Correo electrónico no disponible", Toast.LENGTH_SHORT).show()
-                return
+            // 🔹 BUSCAR EL CORREO REAL EN LA TABLA USUARIO
+            buscarCorreoUsuario(paciente.ID_USUARIO) { correo ->
+                if (correo.isNotEmpty() && correo != "No especificado") {
+                    Log.d("MainActivity", "✅ Correo encontrado: $correo")
+
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:$correo")
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf(correo))
+                        putExtra(Intent.EXTRA_SUBJECT, "Consulta Médica - Dr. ${getDoctorName()}")
+                        putExtra(Intent.EXTRA_TEXT,
+                            "Estimado/a ${paciente.NOMBRE} ${paciente.APELLIDO},\n\n" +
+                                    "Espero que se encuentre bien.\n\n" +
+                                    "Saludos cordiales,\n" +
+                                    "Dr. ${getDoctorName()}"
+                        )
+                    }
+
+                    // Verificar si hay alguna app que pueda manejar el intent
+                    val packageManager = packageManager
+                    if (intent.resolveActivity(packageManager) != null) {
+                        startActivity(intent)
+                        Log.d("MainActivity", "✅ Gmail abierto exitosamente")
+                    } else {
+                        // Si no hay Gmail, intentar con cualquier app de correo
+                        val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "message/rfc822"
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf(correo))
+                            putExtra(Intent.EXTRA_SUBJECT, "Consulta Médica - Dr. ${getDoctorName()}")
+                            putExtra(Intent.EXTRA_TEXT,
+                                "Estimado/a ${paciente.NOMBRE} ${paciente.APELLIDO},\n\n" +
+                                        "Espero que se encuentre bien.\n\n" +
+                                        "Saludos cordiales,\n" +
+                                        "Dr. ${getDoctorName()}"
+                            )
+                        }
+
+                        if (fallbackIntent.resolveActivity(packageManager) != null) {
+                            startActivity(Intent.createChooser(fallbackIntent, "Enviar correo"))
+                            Log.d("MainActivity", "✅ App de correo alternativa abierta")
+                        } else {
+                            runOnUiThread {
+                                Toast.makeText(this, "No hay aplicación de correo instalada", Toast.LENGTH_LONG).show()
+                            }
+                            Log.e("MainActivity", "❌ No hay app de correo instalada")
+                        }
+                    }
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this, "Correo electrónico no disponible para este paciente", Toast.LENGTH_LONG).show()
+                    }
+                    Log.e("MainActivity", "❌ Correo no disponible para el paciente")
+                }
             }
 
-            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                data = Uri.parse("mailto:$email")
-                putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
-                putExtra(Intent.EXTRA_SUBJECT, "Consulta Médica")
-            }
-
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
-            } else {
-                Toast.makeText(this, "No hay aplicación de correo instalada", Toast.LENGTH_SHORT).show()
-            }
         } catch (e: Exception) {
-            Toast.makeText(this, "Error al abrir correo: ${e.message}", Toast.LENGTH_SHORT).show()
-            Log.e("MainActivity", "Error Gmail: ${e.message}")
+            Log.e("MainActivity", "❌ Error al abrir Gmail: ${e.message}", e)
+            runOnUiThread {
+                Toast.makeText(this, "Error al abrir correo: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
+    }
+
+    /**
+     * Obtiene el nombre del doctor actual
+     */
+    private fun getDoctorName(): String {
+        val currentUser = auth.currentUser
+        if (currentUser == null) return ""
+
+        // Podrías cachear este valor para mejor performance
+        return "Médico" // Por ahora retornamos un valor por defecto
+        // En una implementación real, buscarías esto de Firestore
     }
 
     /**
@@ -3849,13 +3901,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Busca el correo del paciente en la tabla usuario usando ID_USUARIO
+     * Busca el correo del paciente en la tabla usuario usando ID_USUARIO - VERSIÓN MEJORADA
      */
     private fun buscarCorreoUsuario(idUsuario: Long, callback: (String) -> Unit) {
         if (idUsuario == 0L) {
+            Log.e("MainActivity", "❌ ID_USUARIO es 0, no se puede buscar correo")
             callback("No especificado")
             return
         }
+
+        Log.d("MainActivity", "🔍 Buscando correo para ID_USUARIO: $idUsuario")
 
         db.collection("usuario")
             .whereEqualTo("ID_USUARIO", idUsuario)
@@ -3864,17 +3919,18 @@ class MainActivity : AppCompatActivity() {
                 if (!documentos.isEmpty) {
                     val usuarioDoc = documentos.documents.first()
                     val correo = usuarioDoc.getString("CORREO") ?: "No especificado"
+                    Log.d("MainActivity", "✅ Correo encontrado en BD: $correo")
                     callback(correo)
                 } else {
+                    Log.e("MainActivity", "❌ No se encontró usuario con ID: $idUsuario")
                     callback("No especificado")
                 }
             }
             .addOnFailureListener { e ->
-                Log.e("MainActivity", "Error al buscar correo: ${e.message}")
+                Log.e("MainActivity", "❌ Error al buscar correo: ${e.message}")
                 callback("No especificado")
             }
     }
-
     /**
      * Muestra un diálogo con toda la información del paciente (VERSIÓN MEJORADA CON LAYOUT)
      */
