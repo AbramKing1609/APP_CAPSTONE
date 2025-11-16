@@ -31,9 +31,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         Log.d(TAG, "From: ${remoteMessage.from}")
 
-        // 🔹 VERIFICACIÓN ESTRICTA - SI NO ESTÁN ACTIVADAS, SALIR INMEDIATAMENTE
+        // 🔹 ESTA VERIFICACIÓN SÍ DEBE MANTENERSE (notificaciones push/FCM)
         if (!areNotificationsEnabledInApp()) {
-            Log.d(TAG, "🔕 NOTIFICACIONES DESACTIVADAS EN LA APP - No se procesará mensaje FCM")
+            Log.d(TAG, "🔕 NOTIFICACIONES PUSH DESACTIVADAS - No se procesará mensaje FCM")
             return
         }
 
@@ -41,8 +41,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val body = remoteMessage.notification?.body ?: remoteMessage.data["message"] ?: "Nueva notificación"
 
         Log.d(TAG, "🔔 Procesando notificación FCM: $title")
-
-        // ENVIAR NOTIFICACIÓN PERSISTENTE
         sendPersistentNotification(title, body, remoteMessage.data)
     }
 

@@ -548,6 +548,11 @@ class MainActivity : AppCompatActivity() {
             } else {
                 disableNotifications()
             }
+
+            // 🔹 RECARGAR NOTIFICACIONES INTERNAS INMEDIATAMENTE
+            Handler(Looper.getMainLooper()).postDelayed({
+                recargarNotificacionesInternas()
+            }, 500)
         }
     }
 
@@ -561,7 +566,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun enableNotifications() {
-        Log.d("MainActivity", "🔔 Activando notificaciones...")
+        Log.d("MainActivity", "🔔 Activando notificaciones PUSH/FCM...")
 
         // Suscribirse a temas FCM
         FirebaseMessaging.getInstance().subscribeToTopic("medical_app")
@@ -581,7 +586,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun disableNotifications() {
-        Log.d("MainActivity", "🔕 Desactivando notificaciones...")
+        Log.d("MainActivity", "🔕 Desactivando notificaciones PUSH/FCM...")
 
         // Cancelar suscripción a temas FCM
         FirebaseMessaging.getInstance().unsubscribeFromTopic("medical_app")
@@ -600,7 +605,24 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-
+    /**
+     * Determina qué tipos de notificaciones deben mostrarse según la configuración
+     */
+    private fun deberiaMostrarNotificacion(tipo: String): Boolean {
+        return when {
+            // Notificaciones internas de la app - SIEMPRE se muestran
+            tipo.startsWith("cita_") && !notificationsEnabled -> {
+                Log.d("MainActivity", "🔔 Notificación interna permitida: $tipo")
+                true
+            }
+            // Notificaciones push/FCM - dependen del switch
+            !notificationsEnabled -> {
+                Log.d("MainActivity", "🔕 Notificación push bloqueada: $tipo")
+                false
+            }
+            else -> true
+        }
+    }
 
     // 🔹 NUEVA FUNCIÓN: Configurar el Spinner de filtro
     private fun configurarFiltroEstados(spinner: Spinner, containerSchedule: LinearLayout) {
@@ -635,11 +657,11 @@ class MainActivity : AppCompatActivity() {
      * Crea una notificación automáticamente cuando se agenda una cita
      */
     private fun crearNotificacionCita(cita: CitaReal, paciente: PacienteReal, tipo: String) {
-        // 🔹 VERIFICACIÓN ESTRICTA AL INICIO
-        if (!notificationsEnabled) {
-            Log.d("MainActivity", "🔕 NOTIFICACIONES DESACTIVADAS - No se procesará cita de tipo: $tipo")
-            return
-        }
+        // 🔹 ELIMINAR esta verificación - LAS NOTIFICACIONES INTERNAS SIEMPRE SE GUARDAN
+        // if (!notificationsEnabled) {
+        //     Log.d("MainActivity", "🔕 NOTIFICACIONES DESACTIVADAS - No se procesará cita de tipo: $tipo")
+        //     return
+        // }
 
         val currentUser = auth.currentUser
         if (currentUser == null) {
@@ -698,18 +720,19 @@ class MainActivity : AppCompatActivity() {
                     "FECHA_SOLICITUD" to fechaSolicitud
                 )
 
-                Log.d("MainActivity", "Creando notificación en Firestore: $titulo")
+                Log.d("MainActivity", "🔔 Guardando notificación INTERNA en Firestore: $titulo")
 
-                // Guardar en Firebase
+                // 🔹 GUARDAR EN FIREBASE SIEMPRE (notificaciones internas)
                 db.collection("notificaciones")
                     .add(notificacionData)
                     .addOnSuccessListener {
-                        Log.d("MainActivity", "✅ Notificación creada exitosamente en Firestore: $titulo")
-                        // 🔹 VERIFICAR UNA VEZ MÁS ANTES DE ENVIAR NOTIFICACIÓN LOCAL
+                        Log.d("MainActivity", "✅ Notificación INTERNA guardada en Firestore: $titulo")
+
+                        // 🔹 NOTIFICACIÓN LOCAL SOLO SI ESTÁN ACTIVADAS LAS PUSH
                         if (notificationsEnabled) {
                             enviarNotificacionLocal(cita, paciente, tipo)
                         } else {
-                            Log.d("MainActivity", "🔕 Notificaciones desactivadas - No se enviará notificación local")
+                            Log.d("MainActivity", "🔕 Notificaciones PUSH desactivadas - Solo se guardó internamente")
                         }
                     }
                     .addOnFailureListener { e ->
@@ -720,14 +743,50 @@ class MainActivity : AppCompatActivity() {
                 Log.e("MainActivity", "Error al obtener médico: ${e.message}")
             }
     }
+    /**
+     * Determina si una notificación es externa (push/FCM) o interna de la app
+     */
+    private fun esNotificacionExterna(tipo: String): Boolean {
+        // Estas son notificaciones que vendrían de FCM/push
+        return when (tipo) {
+            "nueva_cita", "cita_pendiente", "cita_reservada", "cita_cancelada" -> true
+            else -> false
+        }
+    }
 
+    /**
+     * Recarga las notificaciones internas forzosamente
+     */
+    private fun recargarNotificacionesInternas() {
+        val currentLayout = mainContentFrame.getChildAt(0)
+        if (currentLayout != null) {
+            val container = currentLayout.findViewById<LinearLayout>(R.id.containerNotifications)
+            val searchBar = currentLayout.findViewById<EditText>(R.id.etSearchNotifications)
+            if (container != null && searchBar != null) {
+                // Forzar recarga según el modo actual
+                if (mostrandoHistorial && fechaFiltroHistorial != null) {
+                    // Recargar historial
+                    val containerHistory = currentLayout.findViewById<LinearLayout>(R.id.containerHistory)
+                    val tvHistoryTitle = currentLayout.findViewById<TextView>(R.id.tvHistoryTitle)
+                    if (containerHistory != null && tvHistoryTitle != null) {
+                        cargarHistorialNotificaciones(fechaFiltroHistorial!!, containerHistory, tvHistoryTitle)
+                    }
+                } else {
+                    // Recargar notificaciones del día
+                    cargarNotificacionesDelDia(container, searchBar)
+                }
+                Log.d("MainActivity", "🔔 Notificaciones internas recargadas")
+            }
+        }
+    }
     private fun enviarNotificacionLocal(cita: CitaReal, paciente: PacienteReal, tipo: String) {
-        // 🔹 VERIFICACIÓN ESTRICTA - SOLO ENVIAR SI ESTÁN ACTIVADAS
-        if (!notificationsEnabled) {
-            Log.d("MainActivity", "🔕 NOTIFICACIONES DESACTIVADAS - No se enviará notificación local")
+        // 🔹 VERIFICACIÓN SOLO PARA NOTIFICACIONES PUSH
+        if (!notificationsEnabled && esNotificacionExterna(tipo)) {
+            Log.d("MainActivity", "🔕 NOTIFICACIONES PUSH DESACTIVADAS - No se enviará notificación local: $tipo")
             return
         }
 
+        // 🔹 LAS NOTIFICACIONES INTERNAS SIEMPRE SE MUESTRAN
         val (titulo, mensaje) = when (tipo) {
             "nueva_cita" -> Pair("📋 Nueva Cita", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
             "cita_reservada" -> Pair("✅ Cita Confirmada", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
@@ -1204,7 +1263,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Carga las notificaciones reales del médico desde Firebase Firestore
+     * Carga las notificaciones reales del médico desde Firebase Firestore - SIEMPRE
      */
     private fun cargarNotificacionesReales(container: LinearLayout, searchBar: EditText) {
         mostrarLoadingIndicator(container, true)
@@ -1214,6 +1273,9 @@ class MainActivity : AppCompatActivity() {
             mostrarLoadingIndicator(container, false)
             return
         }
+
+        // 🔹 ESTA FUNCIÓN SIEMPRE DEBE CARGAR LAS NOTIFICACIONES INTERNAS
+        Log.d("MainActivity", "🔔 Cargando notificaciones INTERNAS (switch: $notificationsEnabled)")
 
         // Primero obtener el ID_MEDICO del usuario actual
         db.collection("medicos")
@@ -1265,7 +1327,7 @@ class MainActivity : AppCompatActivity() {
                             // Configurar nombre del paciente
                             configurarNombrePacienteEnNotificacion(itemView, notificacion.ID_PACIENTE)
 
-                            // 🔹 CORRECCIÓN: Mostrar el TÍTULO como tipo/estado (igual que antes)
+                            // 🔹 CORRECCIÓN: Mostrar el TÍTULO como tipo/estado
                             itemView.findViewById<TextView>(R.id.tvNotificationType).text = notificacion.TITULO
 
                             // Listener para mostrar detalles
@@ -2298,7 +2360,7 @@ class MainActivity : AppCompatActivity() {
                     return@addOnSuccessListener
                 }
 
-                // Buscar notificaciones de HOY
+                // 🔹 BUSCAR NOTIFICACIONES DE HOY - SIEMPRE SE CARGAN (INTERNAS)
                 val startOfDay = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
@@ -2820,12 +2882,7 @@ class MainActivity : AppCompatActivity() {
      * Crea notificación especial para cita completada
      */
     private fun crearNotificacionCitaCompletada(cita: CitaReal, paciente: PacienteReal) {
-        // 🔹 VERIFICACIÓN ESTRICTA AL INICIO
-        if (!notificationsEnabled) {
-            Log.d("MainActivity", "🔕 NOTIFICACIONES DESACTIVADAS - No se procesará cita completada")
-            return
-        }
-
+        // 🔹 LAS NOTIFICACIONES DE COMPLETADO SON INTERNAS - SIEMPRE SE MUESTRAN
         val currentUser = auth.currentUser
         if (currentUser == null) {
             Log.e("MainActivity", "Usuario no autenticado al crear notificación de cita completada")
