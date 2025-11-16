@@ -157,44 +157,70 @@ class ChatRoomFragment : Fragment() {
     private fun obtenerDatosMedico() {
         mostrarLoading(true)
 
-        val userEmail = auth.currentUser?.email
-        if (userEmail == null) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
             Toast.makeText(requireContext(), "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show()
+            mostrarLoading(false)
             return
         }
 
-        // Buscar ID de usuario por email
-        firestore.collection("usuario")
-            .whereEqualTo("CORREO", userEmail)
+        Log.d("ChatRoom", "🔍 Buscando médico para usuario UID: ${currentUser.uid}")
+
+        // 🔹 CORRECCIÓN: Buscar directamente en 'medicos' por ID_FIREBASE (que es el UID)
+        firestore.collection("medicos")
+            .whereEqualTo("ID_FIREBASE", currentUser.uid)
             .get()
-            .addOnSuccessListener { usuarios ->
-                if (!usuarios.isEmpty) {
-                    val idUsuario = usuarios.documents.first().getLong("ID_USUARIO")
+            .addOnSuccessListener { medicos ->
+                if (!medicos.isEmpty) {
+                    val medicoDoc = medicos.documents.first()
+                    medicoId = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                    val nombreMedico = medicoDoc.getString("NOMBRE") ?: ""
+                    val apellidoMedico = medicoDoc.getString("APELLIDO") ?: ""
 
-                    // Buscar ID de médico
-                    firestore.collection("medicos")
-                        .whereEqualTo("ID_USUARIO", idUsuario)
-                        .get()
-                        .addOnSuccessListener { medicos ->
-                            if (!medicos.isEmpty) {
-                                medicoId = medicos.documents.first().getLong("ID_MEDICO") ?: 0L
-                                val nombreMedico = medicos.documents.first().getString("NOMBRE") ?: ""
-                                val apellidoMedico = medicos.documents.first().getString("APELLIDO") ?: ""
-
-                                inicializarChat(nombreMedico, apellidoMedico)
-                            } else {
-                                mostrarError("No se encontró información del médico")
-                            }
-                        }
-                        .addOnFailureListener { e ->
-                            mostrarError("Error al buscar médico: ${e.message}")
-                        }
+                    Log.d("ChatRoom", "✅ Médico encontrado por ID_FIREBASE: $medicoId - $nombreMedico $apellidoMedico")
+                    inicializarChat(nombreMedico, apellidoMedico)
                 } else {
-                    mostrarError("Usuario no encontrado")
+                    // 🔹 ALTERNATIVA: Si no existe ID_FIREBASE, buscar por CORREO
+                    Log.d("ChatRoom", "⚠️ No se encontró por ID_FIREBASE, buscando por CORREO...")
+                    buscarMedicoPorCorreo(currentUser.email)
                 }
             }
             .addOnFailureListener { e ->
-                mostrarError("Error al buscar usuario: ${e.message}")
+                Log.e("ChatRoom", "❌ Error al buscar médico por ID_FIREBASE: ${e.message}")
+                // 🔹 Si falla, intentar por correo
+                buscarMedicoPorCorreo(currentUser.email)
+            }
+    }
+
+    private fun buscarMedicoPorCorreo(userEmail: String?) {
+        if (userEmail == null) {
+            mostrarError("Error: Email de usuario no disponible")
+            return
+        }
+
+        Log.d("ChatRoom", "🔍 Buscando médico por correo: $userEmail")
+
+        // 🔹 CORRECCIÓN: Buscar directamente en 'medicos' por CORREO
+        firestore.collection("medicos")
+            .whereEqualTo("CORREO", userEmail)
+            .get()
+            .addOnSuccessListener { medicos ->
+                if (!medicos.isEmpty) {
+                    val medicoDoc = medicos.documents.first()
+                    medicoId = medicoDoc.getLong("ID_MEDICO") ?: 0L
+                    val nombreMedico = medicoDoc.getString("NOMBRE") ?: ""
+                    val apellidoMedico = medicoDoc.getString("APELLIDO") ?: ""
+
+                    Log.d("ChatRoom", "✅ Médico encontrado por CORREO: $medicoId - $nombreMedico $apellidoMedico")
+                    inicializarChat(nombreMedico, apellidoMedico)
+                } else {
+                    Log.e("ChatRoom", "❌ No se encontró médico con correo: $userEmail")
+                    mostrarError("No se encontró información del médico. Verifica que estés registrado como médico.")
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("ChatRoom", "❌ Error al buscar médico por correo: ${e.message}")
+                mostrarError("Error al buscar médico: ${e.message}")
             }
     }
 
