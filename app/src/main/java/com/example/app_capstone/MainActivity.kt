@@ -84,12 +84,25 @@ class MainActivity : AppCompatActivity() {
 
     // 🔹 VARIABLE PARA CONTROLAR REDIRECCIONES
     private var isHandlingNotification = false
+    private var notificationsEnabled = true // 🔹 Variable para controlar estado
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         FirebaseApp.initializeApp(this)
+
+        // 🔹 VERIFICACIÓN INICIAL FORZADA
+        val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        if (!sharedPreferences.contains("notifications_enabled")) {
+            // Primera vez - establecer como true por defecto
+            sharedPreferences.edit().putBoolean("notifications_enabled", true).apply()
+            Log.d("MainActivity", "🔔 Estado inicial configurado: true (primera vez)")
+        }
+
+        // 🔹 CARGAR ESTADO DE NOTIFICACIONES
+        loadNotificationState()
 
         initViews()
         setupNavigation()
@@ -422,6 +435,10 @@ class MainActivity : AppCompatActivity() {
             R.layout.content_settings -> {
                 val btnChangePassword = newLayout.findViewById<Button>(R.id.btnChangePassword)
                 val btnAbout = newLayout.findViewById<Button>(R.id.btnAbout)
+                notificationSwitch = newLayout.findViewById<Switch>(R.id.swNotifications) // 🔹 Asegurar esta línea
+
+                // 🔹 CONFIGURAR EL SWITCH INMEDIATAMENTE
+                setupNotificationSwitch()
 
                 btnChangePassword?.setOnClickListener {
                     showChangePasswordDialog()
@@ -509,11 +526,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupNotificationSwitch() {
-        // Verificar el estado actual de las notificaciones
-        val areNotificationsEnabled = areNotificationsEnabled()
-        notificationSwitch.isChecked = areNotificationsEnabled
+        val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        notificationsEnabled = sharedPreferences.getBoolean("notifications_enabled", true)
+
+        // 🔹 FORZAR LA SINCRONIZACIÓN VISUAL DEL SWITCH
+        runOnUiThread {
+            notificationSwitch.isChecked = notificationsEnabled
+            Log.d("MainActivity", "🔔 Switch configurado a: $notificationsEnabled")
+        }
 
         notificationSwitch.setOnCheckedChangeListener { _, isChecked ->
+            notificationsEnabled = isChecked
+
+            // 🔹 GUARDAR ESTADO INMEDIATAMENTE
+            sharedPreferences.edit().putBoolean("notifications_enabled", isChecked).apply()
+
+            Log.d("MainActivity", "🔔 Switch cambiado a: $isChecked")
+
             if (isChecked) {
                 enableNotifications()
             } else {
@@ -532,48 +561,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun enableNotifications() {
+        Log.d("MainActivity", "🔔 Activando notificaciones...")
+
         // Suscribirse a temas FCM
         FirebaseMessaging.getInstance().subscribeToTopic("medical_app")
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    Log.d("MainActivity", "Suscripción a notificaciones exitosa")
-
-                    // 🔹 OPTIMIZACIÓN PARA ANDROID 6.0+ (DOZE MODE)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-                        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                            // Solicitar exclusión de optimización de batería
-                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                            intent.data = Uri.parse("package:$packageName")
-                            try {
-                                startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.e("MainActivity", "No se pudo solicitar exclusión de batería: ${e.message}")
-                            }
-                        }
-                    }
-
-                    Toast.makeText(this, "Notificaciones activadas", Toast.LENGTH_SHORT).show()
+                    Log.d("MainActivity", "✅ Suscripción a notificaciones exitosa")
+                    Toast.makeText(this, "🔔 Notificaciones activadas", Toast.LENGTH_SHORT).show()
                 } else {
-                    Log.e("MainActivity", "Error al suscribirse a notificaciones")
-                    notificationSwitch.isChecked = false
+                    Log.e("MainActivity", "❌ Error al suscribirse a notificaciones")
+                    // Revertir el cambio visual
+                    runOnUiThread {
+                        notificationSwitch.isChecked = false
+                        notificationsEnabled = false
+                    }
                 }
             }
     }
 
     private fun disableNotifications() {
+        Log.d("MainActivity", "🔕 Desactivando notificaciones...")
+
         // Cancelar suscripción a temas FCM
         FirebaseMessaging.getInstance().unsubscribeFromTopic("medical_app")
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    Log.d("MainActivity", "Notificaciones desactivadas")
-                    Toast.makeText(this, "Notificaciones desactivadas", Toast.LENGTH_SHORT).show()
+                    Log.d("MainActivity", "🔕 Notificaciones desactivadas")
+                    Toast.makeText(this, "🔕 Notificaciones desactivadas", Toast.LENGTH_SHORT).show()
                 } else {
-                    Log.e("MainActivity", "Error al desactivar notificaciones")
-                    notificationSwitch.isChecked = true
+                    Log.e("MainActivity", "❌ Error al desactivar notificaciones")
+                    // Revertir el cambio visual
+                    runOnUiThread {
+                        notificationSwitch.isChecked = true
+                        notificationsEnabled = true
+                    }
                 }
             }
     }
+
 
 
     // 🔹 NUEVA FUNCIÓN: Configurar el Spinner de filtro
@@ -609,6 +635,12 @@ class MainActivity : AppCompatActivity() {
      * Crea una notificación automáticamente cuando se agenda una cita
      */
     private fun crearNotificacionCita(cita: CitaReal, paciente: PacienteReal, tipo: String) {
+        // 🔹 VERIFICACIÓN ESTRICTA AL INICIO
+        if (!notificationsEnabled) {
+            Log.d("MainActivity", "🔕 NOTIFICACIONES DESACTIVADAS - No se procesará cita de tipo: $tipo")
+            return
+        }
+
         val currentUser = auth.currentUser
         if (currentUser == null) {
             Log.e("MainActivity", "Usuario no autenticado al crear notificación")
@@ -626,33 +658,32 @@ class MainActivity : AppCompatActivity() {
                     return@addOnSuccessListener
                 }
 
-                // 🔹 OBTENER FECHA ACTUAL PARA MOSTRAR EN LA NOTIFICACIÓN
                 val fechaSolicitud = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
 
-                // 🔹 TÍTULOS Y MENSAJES MEJORADOS CON FECHA DE SOLICITUD
+                // 🔹 CORRECCIÓN COMPLETA: Usar when exhaustivo
                 val (titulo, mensaje) = when (tipo) {
                     "nueva_cita" -> Pair(
                         "📋 Nueva Cita Solicitada - $fechaSolicitud",
                         "El paciente ${paciente.NOMBRE} ${paciente.APELLIDO} ha solicitado una nueva cita para el ${formatearFecha(cita.FECHA)} a las ${cita.HORA.substring(0, 5)}\n\n📅 Solicitado el: $fechaSolicitud"
                     )
                     "cita_pendiente" -> Pair(
-                        "⏳ Cita Pendiente",
+                        "⏳ Cita Pendiente - $fechaSolicitud",
                         "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} está pendiente de confirmación para el ${formatearFecha(cita.FECHA)}"
                     )
                     "cita_reservada" -> Pair(
-                        "✅ Cita Confirmada",
+                        "✅ Cita Confirmada - $fechaSolicitud",
                         "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} ha sido confirmada para el ${formatearFecha(cita.FECHA)} a las ${cita.HORA.substring(0, 5)}"
                     )
                     "cita_cancelada" -> Pair(
-                        "❌ Cita Cancelada",
+                        "❌ Cita Cancelada - $fechaSolicitud",
                         "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} programada para el ${formatearFecha(cita.FECHA)} ha sido cancelada"
                     )
                     "cita_completada" -> Pair(
-                        "🏁 Cita Completada",
+                        "🏁 Cita Completada - $fechaSolicitud",
                         "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} ha sido completada exitosamente"
                     )
                     else -> Pair(
-                        "📝 Actualización de Cita",
+                        "📝 Actualización de Cita - $fechaSolicitud",
                         "Actualización en la cita del paciente ${paciente.NOMBRE} ${paciente.APELLIDO}"
                     )
                 }
@@ -664,29 +695,39 @@ class MainActivity : AppCompatActivity() {
                     "FECHA_ENVIO" to com.google.firebase.Timestamp.now(),
                     "ID_PACIENTE" to cita.ID_PACIENTE,
                     "ID_MEDICO" to idMedico,
-                    "FECHA_SOLICITUD" to fechaSolicitud // 🔹 GUARDAR FECHA DE SOLICITUD
+                    "FECHA_SOLICITUD" to fechaSolicitud
                 )
 
-                Log.d("MainActivity", "Creando notificación: $titulo")
+                Log.d("MainActivity", "Creando notificación en Firestore: $titulo")
 
                 // Guardar en Firebase
                 db.collection("notificaciones")
                     .add(notificacionData)
                     .addOnSuccessListener {
-                        Log.d("MainActivity", "✅ Notificación creada exitosamente: $titulo")
+                        Log.d("MainActivity", "✅ Notificación creada exitosamente en Firestore: $titulo")
+                        // 🔹 VERIFICAR UNA VEZ MÁS ANTES DE ENVIAR NOTIFICACIÓN LOCAL
+                        if (notificationsEnabled) {
+                            enviarNotificacionLocal(cita, paciente, tipo)
+                        } else {
+                            Log.d("MainActivity", "🔕 Notificaciones desactivadas - No se enviará notificación local")
+                        }
                     }
                     .addOnFailureListener { e ->
-                        Log.e("MainActivity", "❌ Error al crear notificación: ${e.message}")
+                        Log.e("MainActivity", "❌ Error al crear notificación en Firestore: ${e.message}")
                     }
             }
             .addOnFailureListener { e ->
                 Log.e("MainActivity", "Error al obtener médico: ${e.message}")
             }
-        // Además, enviar notificación push local
-        enviarNotificacionLocal(cita, paciente, tipo)
     }
 
     private fun enviarNotificacionLocal(cita: CitaReal, paciente: PacienteReal, tipo: String) {
+        // 🔹 VERIFICACIÓN ESTRICTA - SOLO ENVIAR SI ESTÁN ACTIVADAS
+        if (!notificationsEnabled) {
+            Log.d("MainActivity", "🔕 NOTIFICACIONES DESACTIVADAS - No se enviará notificación local")
+            return
+        }
+
         val (titulo, mensaje) = when (tipo) {
             "nueva_cita" -> Pair("📋 Nueva Cita", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
             "cita_reservada" -> Pair("✅ Cita Confirmada", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
@@ -694,6 +735,10 @@ class MainActivity : AppCompatActivity() {
             "cita_completada" -> Pair("🏁 Cita Completada", "Paciente: ${paciente.NOMBRE} ${paciente.APELLIDO}")
             else -> Pair("Notificación Médica", "Actualización de cita")
         }
+
+        Log.d("MainActivity", "🔔 Enviando notificación local: $titulo")
+
+        val notificationId = System.currentTimeMillis().toInt()
 
         // Intent directo a notificaciones
         val intent = Intent(this, MainActivity::class.java).apply {
@@ -706,23 +751,23 @@ class MainActivity : AppCompatActivity() {
 
         val pendingIntent = PendingIntent.getActivity(
             this,
-            System.currentTimeMillis().toInt(),
+            notificationId,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         // Intent para eliminar notificación
         val dismissIntent = Intent(this, NotificationDismissReceiver::class.java).apply {
-            putExtra("notification_id", System.currentTimeMillis().toInt())
+            putExtra("notification_id", notificationId)
         }
         val dismissPendingIntent = PendingIntent.getBroadcast(
             this,
-            System.currentTimeMillis().toInt(),
+            notificationId,
             dismissIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // 🔹 NOTIFICACIÓN ONGOING (PERSISTENTE)
+        // NOTIFICACIÓN
         val notification = NotificationCompat.Builder(this, MyFirebaseMessagingService.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(titulo)
@@ -733,22 +778,25 @@ class MainActivity : AppCompatActivity() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setOngoing(true) // 🔹 CRÍTICO: Hacerla persistente
-            .setTimeoutAfter(0) // Nunca se auto-elimina
+            .setOngoing(true)
+            .setTimeoutAfter(0)
             .setWhen(System.currentTimeMillis())
             .setShowWhen(true)
             .setColor(ContextCompat.getColor(this, R.color.colorPrimary))
             .addAction(R.drawable.ic_notification, "Eliminar", dismissPendingIntent)
             .build()
 
-        val notificationId = System.currentTimeMillis().toInt()
         notificationManager.notify(notificationId, notification)
 
-        Log.d("MainActivity", "🔔 Notificación ONGOING enviada - ID: $notificationId")
-
-        // 🔹 CREAR SEGUNDA NOTIFICACIÓN NORMAL (opcional)
-        crearNotificacionNormal(titulo, mensaje, intent)
+        Log.d("MainActivity", "✅ Notificación local enviada - ID: $notificationId")
     }
+
+    private fun loadNotificationState() {
+        val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        notificationsEnabled = sharedPreferences.getBoolean("notifications_enabled", true)
+        Log.d("MainActivity", "🔔 Estado de notificaciones cargado: $notificationsEnabled")
+    }
+
     // 🔹 NOTIFICACIÓN NORMAL COMO RESPALDO
     private fun crearNotificacionNormal(titulo: String, mensaje: String, intent: Intent) {
         val pendingIntent = PendingIntent.getActivity(
@@ -818,11 +866,6 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Notificación persistente enviada", Toast.LENGTH_SHORT).show()
     }
 
-// Llama a esta función desde onCreate para probar:
-// testPersistentNotification()
-
-// Llama a esta función desde onCreate para probar:
-// testNotificationRedirect()
     /**
      * Valida si un paciente ya tiene una cita con el mismo médico en la misma fecha
      * RETORNA: true si ya existe una cita (y cuál es la cita existente), false si no existe
@@ -2777,30 +2820,65 @@ class MainActivity : AppCompatActivity() {
      * Crea notificación especial para cita completada
      */
     private fun crearNotificacionCitaCompletada(cita: CitaReal, paciente: PacienteReal) {
-        val currentUser = auth.currentUser ?: return
+        // 🔹 VERIFICACIÓN ESTRICTA AL INICIO
+        if (!notificationsEnabled) {
+            Log.d("MainActivity", "🔕 NOTIFICACIONES DESACTIVADAS - No se procesará cita completada")
+            return
+        }
 
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            Log.e("MainActivity", "Usuario no autenticado al crear notificación de cita completada")
+            return
+        }
+
+        // Obtener ID_MEDICO del usuario actual
         db.collection("medicos")
             .document(currentUser.uid)
             .get()
             .addOnSuccessListener { medicoDoc ->
                 val idMedico = medicoDoc.getLong("ID_MEDICO") ?: 0L
-                if (idMedico == 0L) return@addOnSuccessListener
+                if (idMedico == 0L) {
+                    Log.e("MainActivity", "ID_MEDICO es 0 al crear notificación de cita completada")
+                    return@addOnSuccessListener
+                }
+
+                val fechaSolicitud = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+
+                // 🔹 CORRECCIÓN: Definir título y mensaje específicos para cita completada
+                val titulo = "🏁 Cita Completada - $fechaSolicitud"
+                val mensaje = "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} ha sido completada exitosamente el ${formatearFecha(cita.FECHA)}"
 
                 val notificacionData = hashMapOf(
                     "ID_NOTIFICACIONES" to System.currentTimeMillis(),
-                    "TITULO" to "🏁 Cita Completada",
-                    "MENSAJE" to "La cita con ${paciente.NOMBRE} ${paciente.APELLIDO} ha sido completada exitosamente. Paciente atendido.",
+                    "TITULO" to titulo,
+                    "MENSAJE" to mensaje,
                     "FECHA_ENVIO" to com.google.firebase.Timestamp.now(),
                     "ID_PACIENTE" to cita.ID_PACIENTE,
                     "ID_MEDICO" to idMedico,
-                    "TIPO" to "completada" // 🔹 PARA FILTRAR EN EL HISTORIAL
+                    "FECHA_SOLICITUD" to fechaSolicitud
                 )
 
+                Log.d("MainActivity", "Creando notificación de cita completada en Firestore: $titulo")
+
+                // Guardar en Firebase
                 db.collection("notificaciones")
                     .add(notificacionData)
                     .addOnSuccessListener {
-                        Log.d("MainActivity", "✅ Notificación de cita completada creada")
+                        Log.d("MainActivity", "✅ Notificación de cita completada creada exitosamente en Firestore: $titulo")
+                        // 🔹 VERIFICAR UNA VEZ MÁS ANTES DE ENVIAR NOTIFICACIÓN LOCAL
+                        if (notificationsEnabled) {
+                            enviarNotificacionLocal(cita, paciente, "cita_completada")
+                        } else {
+                            Log.d("MainActivity", "🔕 Notificaciones desactivadas - No se enviará notificación local de cita completada")
+                        }
                     }
+                    .addOnFailureListener { e ->
+                        Log.e("MainActivity", "❌ Error al crear notificación de cita completada en Firestore: ${e.message}")
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error al obtener médico para notificación de cita completada: ${e.message}")
             }
     }
 
@@ -3867,5 +3945,16 @@ class MainActivity : AppCompatActivity() {
 
         // Personalizar el botón
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
+    }
+
+    private fun debugNotificationState() {
+        val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        val estadoGuardado = sharedPreferences.getBoolean("notifications_enabled", true)
+        Log.d("MainActivity", "🔔 DEBUG - Estado guardado: $estadoGuardado")
+        Log.d("MainActivity", "🔔 DEBUG - Variable en memoria: $notificationsEnabled")
+
+        if (::notificationSwitch.isInitialized) {
+            Log.d("MainActivity", "🔔 DEBUG - Estado del switch UI: ${notificationSwitch.isChecked}")
+        }
     }
 }

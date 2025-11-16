@@ -31,15 +31,42 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         Log.d(TAG, "From: ${remoteMessage.from}")
 
+        // 🔹 VERIFICACIÓN ESTRICTA - SI NO ESTÁN ACTIVADAS, SALIR INMEDIATAMENTE
+        if (!areNotificationsEnabledInApp()) {
+            Log.d(TAG, "🔕 NOTIFICACIONES DESACTIVADAS EN LA APP - No se procesará mensaje FCM")
+            return
+        }
+
         val title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "App Médica"
         val body = remoteMessage.notification?.body ?: remoteMessage.data["message"] ?: "Nueva notificación"
 
-        Log.d(TAG, "Title: $title, Body: $body")
+        Log.d(TAG, "🔔 Procesando notificación FCM: $title")
 
-        // 🔹 ENVIAR NOTIFICACIÓN PERSISTENTE
+        // ENVIAR NOTIFICACIÓN PERSISTENTE
         sendPersistentNotification(title, body, remoteMessage.data)
     }
 
+    /**
+     * 🔹 VERIFICACIÓN MÁS ROBUSTA DEL ESTADO DE NOTIFICACIONES
+     */
+    private fun areNotificationsEnabledInApp(): Boolean {
+        return try {
+            val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+            val enabled = sharedPreferences.getBoolean("notifications_enabled", true)
+            Log.d(TAG, "🔔 FCM - Estado verificado: $enabled")
+
+            // 🔹 VERIFICACIÓN EXTRA: Si no existe la preferencia, considerar como activada
+            if (!sharedPreferences.contains("notifications_enabled")) {
+                Log.d(TAG, "🔔 FCM - Preferencia no existe, usando true por defecto")
+                true
+            } else {
+                enabled
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al verificar estado, usando true por defecto: ${e.message}")
+            true
+        }
+    }
     /**
      * 🔹 NOTIFICACIÓN PERSISTENTE QUE NO DESAPARECE AL DESBLOQUEAR
      */
