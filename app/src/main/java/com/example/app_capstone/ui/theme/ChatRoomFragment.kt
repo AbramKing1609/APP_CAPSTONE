@@ -1,6 +1,5 @@
 package com.example.app_capstone.ui.ChatRoom
 
-import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -13,7 +12,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.app_capstone.MainActivity
 import com.example.app_capstone.R
 import com.example.app_capstone.databinding.FragmentChatRoomBinding
 import com.google.firebase.auth.FirebaseAuth
@@ -92,8 +90,6 @@ class ChatRoomFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Obtener datos de los arguments
         obtenerDatosArguments()
     }
 
@@ -101,7 +97,6 @@ class ChatRoomFragment : Fragment() {
         try {
             Log.d("ChatRoom", "🔹 Obteniendo datos desde arguments...")
 
-            // 🔹 USAR ESTE MÉTODO QUE SÍ FUNCIONA
             idCita = arguments?.getLong("id_cita") ?: 0L
             idPaciente = arguments?.getLong("id_paciente") ?: 0L
             nombrePaciente = arguments?.getString("nombre_paciente") ?: ""
@@ -115,7 +110,6 @@ class ChatRoomFragment : Fragment() {
 
             if (idCita != 0L && idPaciente != 0L && nombrePaciente.isNotEmpty()) {
                 Log.d("ChatRoom", "✅ Todos los datos están completos")
-                // Proceder con la inicialización
                 initFirebase()
                 setupBackPressHandler()
                 obtenerDatosMedico()
@@ -138,7 +132,6 @@ class ChatRoomFragment : Fragment() {
     }
 
     private fun setupBackPressHandler() {
-        // Interceptar botón atrás del sistema
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
             object : OnBackPressedCallback(true) {
@@ -148,7 +141,6 @@ class ChatRoomFragment : Fragment() {
             }
         )
 
-        // Botón atrás de la UI
         binding.btnBack.setOnClickListener {
             mostrarDialogoSalir()
         }
@@ -166,7 +158,6 @@ class ChatRoomFragment : Fragment() {
 
         Log.d("ChatRoom", "🔍 Buscando médico para usuario UID: ${currentUser.uid}")
 
-        // 🔹 CORRECCIÓN: Buscar directamente en 'medicos' por ID_FIREBASE (que es el UID)
         firestore.collection("medicos")
             .whereEqualTo("ID_FIREBASE", currentUser.uid)
             .get()
@@ -180,14 +171,12 @@ class ChatRoomFragment : Fragment() {
                     Log.d("ChatRoom", "✅ Médico encontrado por ID_FIREBASE: $medicoId - $nombreMedico $apellidoMedico")
                     inicializarChat(nombreMedico, apellidoMedico)
                 } else {
-                    // 🔹 ALTERNATIVA: Si no existe ID_FIREBASE, buscar por CORREO
                     Log.d("ChatRoom", "⚠️ No se encontró por ID_FIREBASE, buscando por CORREO...")
                     buscarMedicoPorCorreo(currentUser.email)
                 }
             }
             .addOnFailureListener { e ->
                 Log.e("ChatRoom", "❌ Error al buscar médico por ID_FIREBASE: ${e.message}")
-                // 🔹 Si falla, intentar por correo
                 buscarMedicoPorCorreo(currentUser.email)
             }
     }
@@ -200,7 +189,6 @@ class ChatRoomFragment : Fragment() {
 
         Log.d("ChatRoom", "🔍 Buscando médico por correo: $userEmail")
 
-        // 🔹 CORRECCIÓN: Buscar directamente en 'medicos' por CORREO
         firestore.collection("medicos")
             .whereEqualTo("CORREO", userEmail)
             .get()
@@ -225,33 +213,21 @@ class ChatRoomFragment : Fragment() {
     }
 
     private fun inicializarChat(nombreMedico: String, apellidoMedico: String) {
-        // Crear ID único para el chat room basado en la cita
         chatRoomId = "chat_cita_${idCita}_paciente_${idPaciente}_medico_${medicoId}"
 
         Log.d("ChatRoom", "Inicializando chat DOCTOR: $chatRoomId")
 
-        // Configurar UI
         setupUI(nombreMedico, apellidoMedico)
         setupRecyclerView()
         setupInputListeners()
 
-        // Verificar/Crear chat room en Realtime Database
+        // ✅ CORREGIDO: Solo verificar/crear chat room - Los listeners se inicializan DENTRO
         verificarOCrearChatRoom(nombreMedico, apellidoMedico)
-
-        // Escuchar mensajes
-        listenToMessages()
-
-        // Escuchar estado de escritura
-        listenToTypingStatus()
-
-        // Escuchar estado del chat room
-        listenToChatRoomStatus()
 
         mostrarLoading(false)
     }
 
     private fun setupUI(nombreMedico: String, apellidoMedico: String) {
-        // ✅ DOCTOR: Mostrar nombre del paciente en la cabecera
         binding.tvUserName.text = nombrePaciente
         binding.tvUserRole.text = "Paciente"
         binding.tvStatus.text = "En línea"
@@ -266,49 +242,42 @@ class ChatRoomFragment : Fragment() {
 
         binding.rvMessages.apply {
             layoutManager = LinearLayoutManager(requireContext()).apply {
-                stackFromEnd = true // Mostrar desde el final
+                stackFromEnd = true
             }
             adapter = messagesAdapter
         }
     }
 
     private fun setupInputListeners() {
-        // Botón enviar
         binding.btnSend.setOnClickListener {
             enviarMensaje()
         }
 
-        // Listener de escritura
         binding.etMessage.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (!s.isNullOrEmpty() && !isTyping) {
                     setTypingStatus(true)
                 }
-
-                // Resetear el timer de "dejó de escribir"
                 typingHandler.removeCallbacks(stopTypingRunnable)
                 typingHandler.postDelayed(stopTypingRunnable, 2000)
             }
-
             override fun afterTextChanged(s: Editable?) {
                 binding.btnSend.isEnabled = !s.isNullOrBlank()
             }
         })
 
-        // Botón adjuntar (opcional - puedes implementarlo después)
         binding.btnAttach.setOnClickListener {
             Toast.makeText(requireContext(), "Función próximamente", Toast.LENGTH_SHORT).show()
         }
     }
 
+    // ✅ CORREGIDO: Secuencia mejorada para prevenir activación temprana
     private fun verificarOCrearChatRoom(nombreMedico: String, apellidoMedico: String) {
         val chatRoomRef = realtimeDb.child("chatRooms").child(chatRoomId)
 
         chatRoomRef.get().addOnSuccessListener { snapshot ->
             if (!snapshot.exists()) {
-                // Crear nuevo chat room
                 val chatRoom = ChatRoom(
                     chatRoomId = chatRoomId,
                     citaId = idCita,
@@ -325,23 +294,33 @@ class ChatRoomFragment : Fragment() {
 
                 chatRoomRef.setValue(chatRoom)
                     .addOnSuccessListener {
-                        Log.d("ChatRoom", "Chat room creado exitosamente")
+                        Log.d("ChatRoom", "✅ Chat room creado exitosamente con status: active")
+
+                        // ✅ ESCUCHAR SOLO DESPUÉS de crear el chat room
+                        listenToMessages()
+                        listenToTypingStatus()
+                        listenToChatRoomStatus()
                     }
                     .addOnFailureListener { e ->
-                        Log.e("ChatRoom", "Error al crear chat room: ${e.message}")
+                        Log.e("ChatRoom", "❌ Error al crear chat room: ${e.message}")
                     }
             } else {
-                // Verificar si el chat está activo
                 val status = snapshot.child("status").getValue(String::class.java)
+                Log.d("ChatRoom", "📊 Chat room existente - Status: $status")
+
                 if (status == "completed" || status == "cancelled") {
                     mostrarChatFinalizado()
+                } else {
+                    // ✅ Si está activo, inicializar listeners
+                    listenToMessages()
+                    listenToTypingStatus()
+                    listenToChatRoomStatus()
                 }
             }
         }
     }
 
     private fun listenToMessages() {
-        // 🔹 PREVENIR MÚLTIPLES LISTENERS
         if (messagesListener != null) {
             Log.w("ChatRoom", "⚠️ Ya existe un listener activo, removiendo...")
             val messagesRef = realtimeDb.child("chatRooms").child(chatRoomId).child("messages")
@@ -357,25 +336,14 @@ class ChatRoomFragment : Fragment() {
                 val message = snapshot.getValue(Message::class.java)
                 if (message != null) {
                     Log.d("ChatRoom", "Mensaje recibido: ${message.message}")
-
-                    // ✅ AGREGAR directamente a la lista
                     messagesList.add(message)
-
-                    // ✅ NOTIFICAR al adapter que se agregó un item
                     messagesAdapter.notifyItemInserted(messagesList.size - 1)
-
-                    // ✅ Log para debug
                     Log.d("ChatRoom", "Lista ahora tiene ${messagesList.size} mensajes")
-
-                    // ✅ Scroll después de agregar
                     scrollToBottom()
 
-                    // Marcar como leído (si el mensaje es del paciente)
                     if (message.senderId != currentUserId && message.status != "read") {
                         marcarMensajeComoLeido(message.messageId)
                     }
-
-                    // Ocultar empty state
                     binding.emptyStateLayout.visibility = View.GONE
                 }
             }
@@ -401,7 +369,6 @@ class ChatRoomFragment : Fragment() {
         messagesRef.addChildEventListener(messagesListener!!)
     }
 
-    // ✅ NUEVA FUNCIÓN: Scroll seguro al final
     private fun scrollToBottom() {
         try {
             val size = messagesList.size
@@ -414,7 +381,6 @@ class ChatRoomFragment : Fragment() {
 
             if (messagesAdapter.itemCount == 0) {
                 Log.w("ChatRoom", "Adapter vacío, esperando...")
-                // Reintentar después de un delay
                 binding.rvMessages.postDelayed({
                     if (messagesAdapter.itemCount > 0) {
                         binding.rvMessages.scrollToPosition(messagesAdapter.itemCount - 1)
@@ -450,7 +416,6 @@ class ChatRoomFragment : Fragment() {
         val messageId = realtimeDb.child("chatRooms").child(chatRoomId)
             .child("messages").push().key ?: return
 
-        // ✅ DOCTOR: El senderType ahora es "medico"
         val message = Message(
             messageId = messageId,
             senderId = currentUserId,
@@ -468,7 +433,6 @@ class ChatRoomFragment : Fragment() {
             .addOnSuccessListener {
                 Log.d("ChatRoom", "Mensaje enviado exitosamente")
 
-                // Actualizar último mensaje
                 val updates = hashMapOf<String, Any>(
                     "lastMessage" to messageText,
                     "lastMessageTime" to System.currentTimeMillis()
@@ -477,13 +441,8 @@ class ChatRoomFragment : Fragment() {
                 realtimeDb.child("chatRooms").child(chatRoomId)
                     .updateChildren(updates)
 
-                // Limpiar campo de texto
                 binding.etMessage.text?.clear()
-
-                // Detener indicador de escritura
                 setTypingStatus(false)
-
-                // ✅ Scroll al final después de enviar
                 scrollToBottom()
             }
             .addOnFailureListener { e ->
@@ -497,7 +456,6 @@ class ChatRoomFragment : Fragment() {
     }
 
     private fun listenToTypingStatus() {
-        // ✅ DOCTOR: Escuchar cuando el PACIENTE está escribiendo
         val typingRef = realtimeDb.child("chatRooms").child(chatRoomId).child("pacienteTyping")
 
         typingListener = object : ValueEventListener {
@@ -514,19 +472,31 @@ class ChatRoomFragment : Fragment() {
         typingRef.addValueEventListener(typingListener!!)
     }
 
+    // ✅ CORREGIDO: Listener mejorado para prevenir activación temprana
     private fun listenToChatRoomStatus() {
         val statusRef = realtimeDb.child("chatRooms").child(chatRoomId).child("status")
+
+        // ✅ REMOVER LISTENER ANTERIOR si existe
+        chatRoomListener?.let {
+            statusRef.removeEventListener(it)
+            chatRoomListener = null
+        }
 
         chatRoomListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val status = snapshot.getValue(String::class.java)
+                Log.d("ChatRoom", "📊 Estado del chat room cambiado: $status")
+
+                // ✅ SOLO actuar si el estado es "completed" o "cancelled"
                 if (status == "completed" || status == "cancelled") {
+                    Log.d("ChatRoom", "🔴 Chat finalizado - Mostrando diálogo")
                     mostrarChatFinalizado()
                 }
+                // ✅ IGNORAR otros estados ("active", etc.)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.e("ChatRoom", "Error al escuchar status: ${error.message}")
+                Log.e("ChatRoom", "❌ Error al escuchar status: ${error.message}")
             }
         }
 
@@ -535,7 +505,6 @@ class ChatRoomFragment : Fragment() {
 
     private fun setTypingStatus(typing: Boolean) {
         isTyping = typing
-        // ✅ DOCTOR: Indicar que el MÉDICO está escribiendo
         realtimeDb.child("chatRooms").child(chatRoomId)
             .child("medicoTyping")
             .setValue(typing)
@@ -548,12 +517,16 @@ class ChatRoomFragment : Fragment() {
             .setValue("read")
     }
 
+    // ✅ ACTUALIZADO: Diálogo de salir mejorado
     private fun mostrarDialogoSalir() {
+        if (!isAdded || activity?.isFinishing == true) return
+
         AlertDialog.Builder(requireContext())
             .setTitle("⚠️ ¿Salir de la consulta?")
             .setMessage("Si sales de la consulta, se marcará como finalizada y no podrás volver a ingresar.\n\n¿Estás seguro de que deseas salir?")
             .setPositiveButton("Sí, salir") { dialog, _ ->
-                finalizarConsulta()
+                // ✅ Usar navegación segura
+                navegarAtrasSeguro()
                 dialog.dismiss()
             }
             .setNegativeButton("Cancelar") { dialog, _ ->
@@ -580,7 +553,6 @@ class ChatRoomFragment : Fragment() {
     private fun finalizarConsulta() {
         mostrarLoading(true)
 
-        // 1. Marcar chat room como completado en Realtime Database
         val updates = hashMapOf<String, Any>(
             "status" to "completed",
             "completedAt" to System.currentTimeMillis()
@@ -590,8 +562,6 @@ class ChatRoomFragment : Fragment() {
             .updateChildren(updates)
             .addOnSuccessListener {
                 Log.d("ChatRoom", "Chat room marcado como completado")
-
-                // 2. Actualizar estado de la cita en Firestore
                 actualizarEstadoCita()
             }
             .addOnFailureListener { e ->
@@ -605,6 +575,7 @@ class ChatRoomFragment : Fragment() {
             }
     }
 
+    // ✅ CORREGIDO: Navegación segura sin cerrar la app
     private fun actualizarEstadoCita() {
         firestore.collection("cita")
             .whereEqualTo("ID_CITA", idCita)
@@ -627,59 +598,98 @@ class ChatRoomFragment : Fragment() {
                             Toast.LENGTH_SHORT
                         ).show()
 
-                        // ✅ REGRESAR A MainActivity (pantalla principal del médico)
-                        val intent = Intent(requireContext(), MainActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                        startActivity(intent)
-                        activity?.finish()
+                        // ✅ CORREGIDO: Navegación segura
+                        navegarAtrasSeguro()
                     }.addOnFailureListener { e ->
                         Log.e("ChatRoom", "Error al actualizar cita: ${e.message}")
                         mostrarLoading(false)
+                        // ✅ Navegar incluso si hay error
+                        navegarAtrasSeguro()
                     }
+                } else {
+                    Log.e("ChatRoom", "No se encontró la cita")
+                    mostrarLoading(false)
+                    navegarAtrasSeguro()
                 }
             }
             .addOnFailureListener { e ->
                 Log.e("ChatRoom", "Error al buscar cita: ${e.message}")
                 mostrarLoading(false)
+                // ✅ Navegar incluso si hay error
+                navegarAtrasSeguro()
             }
     }
 
+    // ✅ NUEVA FUNCIÓN: Chat finalizado mejorado
     private fun mostrarChatFinalizado() {
-        if (!isAdded || activity == null) {
-            Log.w("ChatRoom", "Fragment no attached")
+        // ✅ VERIFICACIONES MÚLTIPLES para prevenir diálogos fantasmas
+        if (!isAdded || isRemoving || activity?.isFinishing == true || activity?.isDestroyed == true) {
+            Log.w("ChatRoom", "❌ No mostrar diálogo - Fragment/Activity no disponible")
             return
         }
 
+        try {
+            // ✅ VERIFICAR que realmente estamos en un chat finalizado
+            if (chatRoomId.isNotEmpty()) {
+                val chatRoomRef = realtimeDb.child("chatRooms").child(chatRoomId).child("status")
+                chatRoomRef.get().addOnSuccessListener { snapshot ->
+                    val currentStatus = snapshot.getValue(String::class.java)
+                    if (currentStatus == "completed" || currentStatus == "cancelled") {
+                        Log.d("ChatRoom", "✅ Confirmado - Chat realmente finalizado, mostrando diálogo")
+                        mostrarDialogoChatFinalizado()
+                    } else {
+                        Log.w("ChatRoom", "⚠️ Estado actual: $currentStatus - No mostrar diálogo")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ChatRoom", "💥 Error en mostrarChatFinalizado: ${e.message}")
+        }
+    }
+
+    // ✅ NUEVA FUNCIÓN: Diálogo de chat finalizado separado
+    private fun mostrarDialogoChatFinalizado() {
         try {
             AlertDialog.Builder(requireContext())
                 .setTitle("Consulta Finalizada")
                 .setMessage("Esta consulta ha sido finalizada. No puedes enviar más mensajes.")
                 .setPositiveButton("Entendido") { dialog, _ ->
                     dialog.dismiss()
-                    navegarAtras()
+                    navegarAtrasSeguro()
                 }
                 .setCancelable(false)
                 .show()
         } catch (e: Exception) {
-            Log.e("ChatRoom", "Error: ${e.message}")
-            navegarAtras()
+            Log.e("ChatRoom", "💥 Error mostrando diálogo: ${e.message}")
+            navegarAtrasSeguro()
         }
     }
 
-    private fun navegarAtras() {
+    // ✅ NUEVA FUNCIÓN: Navegación segura sin cerrar la app
+    private fun navegarAtrasSeguro() {
         try {
-            if (!isAdded || view == null || activity == null) {
+            if (!isAdded || activity == null) {
+                Log.w("ChatRoom", "No se puede navegar - fragmento no adjunto")
                 return
             }
 
-            // ✅ USAR MainActivity (pantalla principal del médico)
-            val intent = Intent(requireContext(), MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            startActivity(intent)
-            activity?.finish()
+            // ✅ VERIFICACIÓN DOBLE antes de navegar
+            if (isVisible && !isRemoving) {
+                Log.d("ChatRoom", "✅ Navegando seguro al home")
+
+                // Usar popBackStack para regresar al fragmento anterior
+                parentFragmentManager.popBackStack()
+            } else {
+                Log.w("ChatRoom", "Fragmento no visible o removiéndose, no navegar")
+            }
         } catch (e: Exception) {
-            Log.e("ChatRoom", "Error navegando: ${e.message}")
+            Log.e("ChatRoom", "Error en navegación segura: ${e.message}")
         }
+    }
+
+    // ✅ FUNCIÓN ORIGINAL (mantener por compatibilidad)
+    private fun navegarAtras() {
+        navegarAtrasSeguro() // ✅ Redirigir a la versión segura
     }
 
     private fun mostrarLoading(show: Boolean) {
@@ -695,20 +705,29 @@ class ChatRoomFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
 
-        // Remover listeners
-        messagesListener?.let {
-            realtimeDb.child("chatRooms").child(chatRoomId)
-                .child("messages").removeEventListener(it)
-        }
+        Log.d("ChatRoom", "🔴 onDestroyView - Removiendo todos los listeners")
 
-        typingListener?.let {
-            realtimeDb.child("chatRooms").child(chatRoomId)
-                .child("pacienteTyping").removeEventListener(it)
-        }
+        // Remover listeners de manera más agresiva
+        try {
+            messagesListener?.let {
+                realtimeDb.child("chatRooms").child(chatRoomId)
+                    .child("messages").removeEventListener(it)
+                messagesListener = null
+            }
 
-        chatRoomListener?.let {
-            realtimeDb.child("chatRooms").child(chatRoomId)
-                .child("status").removeEventListener(it)
+            typingListener?.let {
+                realtimeDb.child("chatRooms").child(chatRoomId)
+                    .child("pacienteTyping").removeEventListener(it)
+                typingListener = null
+            }
+
+            chatRoomListener?.let {
+                realtimeDb.child("chatRooms").child(chatRoomId)
+                    .child("status").removeEventListener(it)
+                chatRoomListener = null
+            }
+        } catch (e: Exception) {
+            Log.e("ChatRoom", "Error removiendo listeners: ${e.message}")
         }
 
         // Detener indicador de escritura
@@ -716,37 +735,6 @@ class ChatRoomFragment : Fragment() {
         typingHandler.removeCallbacks(stopTypingRunnable)
 
         _binding = null
-    }
-
-    private fun diagnosticarDatosRecibidos() {
-        Log.d("ChatRoom", "=== DIAGNÓSTICO DATOS RECIBIDOS ===")
-        Log.d("ChatRoom", "Arguments: ${arguments}")
-
-        arguments?.keySet()?.forEach { key ->
-            val value = when (val obj = arguments?.get(key)) {
-                is Long -> obj.toString()
-                is String -> obj
-                else -> obj?.toString() ?: "null"
-            }
-            Log.d("ChatRoom", "   $key: $value")
-        }
-
-        Log.d("ChatRoom", "idCita: $idCita")
-        Log.d("ChatRoom", "idPaciente: $idPaciente")
-        Log.d("ChatRoom", "nombrePaciente: $nombrePaciente")
-        Log.d("ChatRoom", "especialidad: $especialidad")
-        Log.d("ChatRoom", "=== FIN DIAGNÓSTICO ===")
-
-        if (idCita == 0L || idPaciente == 0L) {
-            Log.e("ChatRoom", "❌ ERROR: Datos incompletos detectados")
-            // Mostrar diálogo de error pero NO cerrar la app
-            mostrarErrorDatosIncompletos()
-        } else {
-            // Inicializar normalmente
-            initFirebase()
-            setupBackPressHandler()
-            obtenerDatosMedico()
-        }
     }
 
     private fun mostrarErrorDatosIncompletos() {
@@ -776,5 +764,4 @@ class ChatRoomFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
     }
-
 }
