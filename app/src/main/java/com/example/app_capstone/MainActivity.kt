@@ -432,22 +432,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            R.layout.content_settings -> {
-                val btnChangePassword = newLayout.findViewById<Button>(R.id.btnChangePassword)
-                val btnAbout = newLayout.findViewById<Button>(R.id.btnAbout)
-                notificationSwitch = newLayout.findViewById<Switch>(R.id.swNotifications) // 🔹 Asegurar esta línea
-
-                // 🔹 CONFIGURAR EL SWITCH INMEDIATAMENTE
-                setupNotificationSwitch()
-
-                btnChangePassword?.setOnClickListener {
-                    showChangePasswordDialog()
-                }
-
-                btnAbout?.setOnClickListener {
-                    showAboutDialog()
-                }
-            }
 
             R.layout.content_notifications -> {
                 // 1. Obtener contenedores
@@ -510,6 +494,11 @@ class MainActivity : AppCompatActivity() {
                 val btnChangePassword = newLayout.findViewById<Button>(R.id.btnChangePassword)
                 val btnAbout = newLayout.findViewById<Button>(R.id.btnAbout)
                 notificationSwitch = newLayout.findViewById<Switch>(R.id.swNotifications)
+                // Configurar el clic de la flecha para volver al home
+                val ivBack = newLayout.findViewById<ImageView>(R.id.ivBack)
+                ivBack?.setOnClickListener {
+                    loadHomeContent()
+                }
 
                 // Configurar el switch de notificaciones
                 setupNotificationSwitch()
