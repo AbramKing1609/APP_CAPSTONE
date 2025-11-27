@@ -53,6 +53,9 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var actvSpecialty: AutoCompleteTextView
     private lateinit var chipGroupDiasFiltro: ChipGroup
 
+    private lateinit var tvPrecio: EditText
+    private lateinit var ivEditPrecio: ImageView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.content_profile)
@@ -64,6 +67,8 @@ class ProfileActivity : AppCompatActivity() {
         val tvAge = findViewById<TextView>(R.id.tvAge)
         val etContactNumber = findViewById<EditText>(R.id.etContactNumber)
         val tvNacionalidad = findViewById<TextView>(R.id.tvNacionalidad)
+
+        tvPrecio = findViewById(R.id.tvPrecio)
         // 🔹 NUEVAS REFERENCIAS para el filtro por día
         chipGroupDiasFiltro = findViewById(R.id.chipGroupDiasFiltro)
         // 🔹 NUEVAS REFERENCIAS para AutoCompleteTextView
@@ -90,6 +95,7 @@ class ProfileActivity : AppCompatActivity() {
         val ivEditDistrito = findViewById<ImageView>(R.id.ivEditDistrito)
         val ivEditNacionalidad = findViewById<ImageView>(R.id.ivEditNacionalidad)
 
+        ivEditPrecio = findViewById(R.id.ivEditPrecio)
         // 🔹 ICONOS DE HORARIO/FECHAS
         //val ivAddHorario = findViewById<ImageView>(R.id.ivAddHorario)
         val ivAddFecha = findViewById<ImageView>(R.id.ivAddFecha)
@@ -103,6 +109,10 @@ class ProfileActivity : AppCompatActivity() {
         // 🔹 Al hacer clic, abrir galería para cambiar foto
         ivProfilePicture.setOnClickListener {
             checkAndOpenGallery()
+        }
+// 🔹 Listener para editar el precio
+        ivEditPrecio.setOnClickListener {
+            editPrecioField()
         }
 
         val btnChangePassword = findViewById<Button>(R.id.btnChangePassword)
@@ -240,11 +250,11 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         ivEditAdditionalInfo.setOnClickListener {
-            editField("INFO_ADIC", tvAdditionalInfo.text.toString(), tvAdditionalInfo)
+            editField("additional_info", tvAdditionalInfo.text.toString(), tvAdditionalInfo)
         }
 
         ivEditPhone.setOnClickListener {
-            editField("CONTACTO", etContactNumber.text.toString(), etContactNumber)
+            editField("CELULAR", etContactNumber.text.toString(), etContactNumber)
         }
 
         // -------------------------------------------------------------
@@ -1181,7 +1191,25 @@ class ProfileActivity : AppCompatActivity() {
                 val additionalInfo = doctorData["additional_info"] as? String ?: "N/A"
                 val photoUrl = doctorData["FOTO_PERFIL"] as? String
                 val idMedico = doctorData["ID_MEDICO"] as? Long
-
+                // 🔹 Cargar el precio
+                val precio = doctorData["PRECIO"]
+                if (precio != null) {
+                    when (precio) {
+                        is Double -> tvPrecio.setText(String.format("S/ %.2f", precio))
+                        is Long -> tvPrecio.setText(String.format("S/ %.2f", precio.toDouble()))
+                        is String -> {
+                            try {
+                                val precioDouble = precio.toDouble()
+                                tvPrecio.setText(String.format("S/ %.2f", precioDouble))
+                            } catch (e: NumberFormatException) {
+                                tvPrecio.setText("S/ 0.00")
+                            }
+                        }
+                        else -> tvPrecio.setText("S/ 0.00")
+                    }
+                } else {
+                    tvPrecio.setText("S/ 0.00")
+                }
                 // 🔹 Mostrar datos básicos
                 findViewById<TextView>(R.id.tvProfileName).text = "$name $lastName"
                 findViewById<TextView>(R.id.tvAge).text = "$edad años"
@@ -2164,5 +2192,54 @@ class ProfileActivity : AppCompatActivity() {
                 Log.e("ProfileActivity", "Error al actualizar contraseña en Firestore: ${e.message}", e)
                 Toast.makeText(this, "Advertencia: Error al sincronizar contraseña con la base de datos.", Toast.LENGTH_LONG).show()
             }
+    }
+
+    /**
+     * Método para editar el campo PRECIO
+     */
+    private fun editPrecioField() {
+        val editText = EditText(this)
+        editText.setText(tvPrecio.text.toString().replace("S/ ", ""))
+        editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+
+        AlertDialog.Builder(this)
+            .setTitle("Editar Precio de Consulta")
+            .setView(editText)
+            .setPositiveButton("Guardar") { _, _ ->
+                val nuevoPrecio = editText.text.toString().trim()
+
+                if (nuevoPrecio.isEmpty()) {
+                    Toast.makeText(this, "El precio no puede estar vacío", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                // Validar que sea un número válido
+                try {
+                    val precioNumero = nuevoPrecio.toDouble()
+                    if (precioNumero <= 0) {
+                        Toast.makeText(this, "El precio debe ser mayor a 0", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+
+                    val userId = auth.currentUser?.uid ?: return@setPositiveButton
+
+                    // Actualizar en Firestore
+                    db.collection("medicos").document(userId)
+                        .update("PRECIO", precioNumero)
+                        .addOnSuccessListener {
+                            tvPrecio.setText(String.format("S/ %.2f", precioNumero))
+                            Toast.makeText(this, "Precio actualizado correctamente", Toast.LENGTH_SHORT).show()
+                        }
+                        .addOnFailureListener { e ->
+                            Toast.makeText(this, "Error al actualizar el precio: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+
+                } catch (e: NumberFormatException) {
+                    Toast.makeText(this, "Ingrese un precio válido", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 }

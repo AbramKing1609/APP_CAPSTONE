@@ -551,6 +551,48 @@
                     android:tint="#03DAC5" />
             </LinearLayout>
 
+            <!-- Precio de Consulta -->
+            <TextView
+                android:text="Precio de Consulta (S/):"
+                android:textSize="16sp"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/montserrat_bold"
+                android:textColor="#424242" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/background_edittext"
+                android:padding="12dp"
+                android:layout_marginTop="4dp">
+
+                <EditText
+                    android:id="@+id/tvPrecio"
+                    android:text="50.00"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@android:color/transparent"
+                    android:textColor="#212121"
+                    android:fontFamily="@font/montserrat_bold"
+                    android:inputType="numberDecimal"
+                    android:imeOptions="actionDone"
+                    android:singleLine="true" />
+
+                <ImageView
+                    android:id="@+id/ivEditPrecio"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit"
+                    android:tint="#03DAC5" />
+            </LinearLayout>
+
             <!-- Contraseña -->
             <TextView
                 android:text="Contraseña:"
