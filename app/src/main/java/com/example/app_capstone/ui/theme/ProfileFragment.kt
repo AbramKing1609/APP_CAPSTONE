@@ -56,6 +56,21 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var tvPrecio: EditText
     private lateinit var ivEditPrecio: ImageView
 
+    // Variables para calificaciones
+    private lateinit var ratingBarAverage: RatingBar
+    private lateinit var tvAverageRating: TextView
+    private lateinit var tvTotalRatings: TextView
+    private lateinit var progressBar5: ProgressBar
+    private lateinit var progressBar4: ProgressBar
+    private lateinit var progressBar3: ProgressBar
+    private lateinit var progressBar2: ProgressBar
+    private lateinit var progressBar1: ProgressBar
+    private lateinit var tvCount5: TextView
+    private lateinit var tvCount4: TextView
+    private lateinit var tvCount3: TextView
+    private lateinit var tvCount2: TextView
+    private lateinit var tvCount1: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.content_profile)
@@ -106,14 +121,31 @@ class ProfileActivity : AppCompatActivity() {
         // 🔹 Cargar la foto desde Firestore/Storage
         loadProfileData()
 
+        // 🔹 Cargar las calificaciones
+        loadRatings()
         // 🔹 Al hacer clic, abrir galería para cambiar foto
         ivProfilePicture.setOnClickListener {
             checkAndOpenGallery()
         }
-// 🔹 Listener para editar el precio
+        // 🔹 Listener para editar el precio
         ivEditPrecio.setOnClickListener {
             editPrecioField()
         }
+
+        // 🔹 Referencias para calificaciones
+        ratingBarAverage = findViewById(R.id.ratingBarAverage)
+        tvAverageRating = findViewById(R.id.tvAverageRating)
+        tvTotalRatings = findViewById(R.id.tvTotalRatings)
+        progressBar5 = findViewById(R.id.progressBar5)
+        progressBar4 = findViewById(R.id.progressBar4)
+        progressBar3 = findViewById(R.id.progressBar3)
+        progressBar2 = findViewById(R.id.progressBar2)
+        progressBar1 = findViewById(R.id.progressBar1)
+        tvCount5 = findViewById(R.id.tvCount5)
+        tvCount4 = findViewById(R.id.tvCount4)
+        tvCount3 = findViewById(R.id.tvCount3)
+        tvCount2 = findViewById(R.id.tvCount2)
+        tvCount1 = findViewById(R.id.tvCount1)
 
         val btnChangePassword = findViewById<Button>(R.id.btnChangePassword)
 
@@ -1305,7 +1337,7 @@ class ProfileActivity : AppCompatActivity() {
                         }
                 }
                 // -------------------------------------------------------------
-
+                loadRatings()
             }
             .addOnFailureListener { e ->
                 Log.e("ProfileActivity", "Error al cargar datos del perfil", e)
@@ -2241,5 +2273,178 @@ class ProfileActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+    }
+
+    /**
+     * Método para cargar las calificaciones del médico desde la colección "valoracion"
+     */
+    private fun loadRatings() {
+        val currentUser = auth.currentUser ?: return
+        val userId = currentUser.uid
+
+        // Primero obtener el ID_MEDICO del documento del médico
+        db.collection("medicos").document(userId).get()
+            .addOnSuccessListener { medicoDoc ->
+                if (!medicoDoc.exists()) {
+                    return@addOnSuccessListener
+                }
+
+                val idMedico = medicoDoc.getLong("ID_MEDICO")
+                if (idMedico == null) {
+                    Log.e("ProfileActivity", "ID_MEDICO no encontrado")
+                    return@addOnSuccessListener
+                }
+
+                // Consultar todas las valoraciones para este médico
+                db.collection("valoracion")
+                    .whereEqualTo("ID_MEDICO", idMedico)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        if (documents.isEmpty) {
+                            showNoRatings()
+                            return@addOnSuccessListener
+                        }
+
+                        // Calcular estadísticas de calificaciones
+                        val ratingsStats = calculateRatingsStats(documents)
+                        updateRatingsUI(ratingsStats)
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("ProfileActivity", "Error al cargar valoraciones", e)
+                        showNoRatings()
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("ProfileActivity", "Error al obtener ID_MEDICO", e)
+                showNoRatings()
+            }
+    }
+
+    /**
+     * Calcula las estadísticas de las calificaciones
+     */
+    private fun calculateRatingsStats(documents: QuerySnapshot): RatingsStats {
+        var totalRatings = 0
+        var sumRatings = 0.0
+        val ratingCounts = IntArray(5) // índice 0: 1 estrella, 4: 5 estrellas
+
+        for (document in documents) {
+            val stars = document.getLong("NUMERO_ESTRELLAS")?.toInt() ?: 0
+            if (stars in 1..5) {
+                totalRatings++
+                sumRatings += stars
+                ratingCounts[stars - 1]++ // Restar 1 para el índice (1 estrella -> índice 0)
+            }
+        }
+
+        val average = if (totalRatings > 0) sumRatings / totalRatings else 0.0
+
+        return RatingsStats(
+            average = average,
+            totalRatings = totalRatings,
+            ratingCounts = ratingCounts
+        )
+    }
+
+    /**
+     * Actualiza la UI con las estadísticas de calificaciones
+     */
+    private fun updateRatingsUI(stats: RatingsStats) {
+        // Actualizar promedio
+        ratingBarAverage.rating = stats.average.toFloat()
+        tvAverageRating.text = String.format("%.1f", stats.average)
+        tvTotalRatings.text = "Total de valoraciones: ${stats.totalRatings}"
+
+        // Actualizar barras de progreso y conteos
+        if (stats.totalRatings > 0) {
+            // Calcular porcentajes para cada categoría de estrellas
+            for (i in 0 until 5) {
+                val percentage = (stats.ratingCounts[i] * 100) / stats.totalRatings
+                when (i) {
+                    4 -> { // 5 estrellas
+                        progressBar5.progress = percentage
+                        tvCount5.text = stats.ratingCounts[i].toString()
+                    }
+                    3 -> { // 4 estrellas
+                        progressBar4.progress = percentage
+                        tvCount4.text = stats.ratingCounts[i].toString()
+                    }
+                    2 -> { // 3 estrellas
+                        progressBar3.progress = percentage
+                        tvCount3.text = stats.ratingCounts[i].toString()
+                    }
+                    1 -> { // 2 estrellas
+                        progressBar2.progress = percentage
+                        tvCount2.text = stats.ratingCounts[i].toString()
+                    }
+                    0 -> { // 1 estrella
+                        progressBar1.progress = percentage
+                        tvCount1.text = stats.ratingCounts[i].toString()
+                    }
+                }
+            }
+        } else {
+            // Si no hay valoraciones, mostrar 0 en todo
+            progressBar5.progress = 0
+            progressBar4.progress = 0
+            progressBar3.progress = 0
+            progressBar2.progress = 0
+            progressBar1.progress = 0
+            tvCount5.text = "0"
+            tvCount4.text = "0"
+            tvCount3.text = "0"
+            tvCount2.text = "0"
+            tvCount1.text = "0"
+        }
+    }
+
+    /**
+     * Muestra estado cuando no hay calificaciones
+     */
+    private fun showNoRatings() {
+        ratingBarAverage.rating = 0f
+        tvAverageRating.text = "0.0"
+        tvTotalRatings.text = "Total de valoraciones: 0"
+
+        progressBar5.progress = 0
+        progressBar4.progress = 0
+        progressBar3.progress = 0
+        progressBar2.progress = 0
+        progressBar1.progress = 0
+
+        tvCount5.text = "0"
+        tvCount4.text = "0"
+        tvCount3.text = "0"
+        tvCount2.text = "0"
+        tvCount1.text = "0"
+    }
+
+    /**
+     * Data class para almacenar estadísticas de calificaciones
+     */
+    data class RatingsStats(
+        val average: Double,
+        val totalRatings: Int,
+        val ratingCounts: IntArray
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as RatingsStats
+
+            if (average != other.average) return false
+            if (totalRatings != other.totalRatings) return false
+            if (!ratingCounts.contentEquals(other.ratingCounts)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = average.hashCode()
+            result = 31 * result + totalRatings
+            result = 31 * result + ratingCounts.contentHashCode()
+            return result
+        }
     }
 }

@@ -88,6 +88,5 @@
         <activity android:name=".RecuperarCuentaActivity" android:exported="false" />
         <activity android:name=".VerificarCodigoActivity" android:exported="false" />
         <activity android:name=".NuevaContrasenaActivity" android:exported="false" />
-
     </application>
 </manifest>
