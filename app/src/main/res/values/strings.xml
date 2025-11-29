@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">APP_CAPSTONE</string>
+    <string name="app_name">Dr. Pe</string>
     <string name="profile_picture_desc">Foto de perfil del doctor</string>
     <!-- Descripciones de contenido para los nuevos iconos -->
     <string name="default_notification_channel_id">medical_app_notifications</string>

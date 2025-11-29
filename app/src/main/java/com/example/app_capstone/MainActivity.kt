@@ -2322,6 +2322,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun getSafeInt(document: com.google.firebase.firestore.DocumentSnapshot, field: String): Int {
+        return try {
+            when (val value = document.get(field)) {
+                is Int -> value
+                is Long -> value.toInt()
+                is Double -> value.toInt()
+                is String -> value.toIntOrNull() ?: 0
+                else -> 0
+            }
+        } catch (e: Exception) {
+            0
+        }
+    }
+
     /**
      * Carga solo las notificaciones del día actual
      */
@@ -2736,7 +2750,7 @@ class MainActivity : AppCompatActivity() {
                                             CORREO = getSafeString(document, "CORREO"),
                                             CELULAR = getSafeString(document, "CELULAR"),
                                             DNI = getSafeString(document, "DNI"),
-                                            EDAD = 0,
+                                            EDAD = getSafeInt(document, "EDAD"),
                                             SEXO = getSafeString(document, "SEXO")
                                         )
                                         pacientesList.add(paciente)
